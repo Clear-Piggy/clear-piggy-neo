@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Check Storage Buckets</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .bucket {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        .error { color: red; }
+        .success { color: green; }
+        .code {
+            background: #f0f0f0;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>Check Supabase Storage Buckets</h1>
+    <button onclick="checkBuckets()">Check Available Buckets</button>
+    <button onclick="testReceiptsBucket()">Test 'receipts' Bucket</button>
+    <button onclick="listFilesInBucket()">List Files in Bucket</button>
+    <div id="status"></div>
+    <div id="results"></div>
+
+    <script>
+        const SUPABASE_URL = 'https://lrwvooucggciazmzxqlb.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxyd3ZvdWNnZ2NpYXptenp4cWxiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MjgwNjkyNzUsImV4cCI6MjA0MzY0NTI3NX0.tKwwPiaFLRql6M8UbfVPkr4e7dAOA_BQMpEQdPHCLe0';
+        
+        const { createClient } = supabase;
+        const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        async function checkBuckets() {
+            const statusDiv = document.getElementById('status');
+            const resultsDiv = document.getElementById('results');
+            
+            statusDiv.innerHTML = '<p>Checking buckets...</p>';
+            resultsDiv.innerHTML = '';
+
+            try {
+                // Try to list buckets (this might fail due to permissions)
+                const { data: buckets, error: bucketsError } = await supabaseClient.storage.listBuckets();
+                
+                if (bucketsError) {
+                    statusDiv.innerHTML = `<p class="error">Cannot list buckets: ${bucketsError.message}</p>`;
+                    
+                    // Try known bucket names
+                    resultsDiv.innerHTML = '<h3>Testing known bucket names:</h3>';
+                    const knownBuckets = ['receipts', 'documents', 'public', 'avatars', 'uploads'];
+                    
+                    for (const bucketName of knownBuckets) {
+                        const testResult = await testBucket(bucketName);
+                        resultsDiv.innerHTML += testResult;
+                    }
+                } else {
+                    statusDiv.innerHTML = `<p class="success">Found ${buckets?.length || 0} buckets</p>`;
+                    
+                    let html = '<h3>Available Buckets:</h3>';
+                    if (buckets && buckets.length > 0) {
+                        buckets.forEach(bucket => {
+                            html += `
+                                <div class="bucket">
+                                    <h4>${bucket.name}</h4>
+                                    <p>ID: ${bucket.id}</p>
+                                    <p>Public: ${bucket.public ? 'Yes' : 'No'}</p>
+                                    <p>Created: ${new Date(bucket.created_at).toLocaleString()}</p>
+                                </div>
+                            `;
+                        });
+                    } else {
+                        html += '<p>No buckets found</p>';
+                    }
+                    resultsDiv.innerHTML = html;
+                }
+            } catch (error) {
+                statusDiv.innerHTML = `<p class="error">Error: ${error.message}</p>`;
+            }
+        }
+
+        async function testBucket(bucketName) {
+            try {
+                // Try to get a file list from the bucket
+                const { data, error } = await supabaseClient.storage
+                    .from(bucketName)
+                    .list('', { limit: 1 });
+                
+                if (error) {
+                    return `<p class="error">❌ ${bucketName}: ${error.message}</p>`;
+                } else {
+                    return `<p class="success">✅ ${bucketName}: Accessible</p>`;
+                }
+            } catch (err) {
+                return `<p class="error">❌ ${bucketName}: ${err.message}</p>`;
+            }
+        }
+
+        async function testReceiptsBucket() {
+            const statusDiv = document.getElementById('status');
+            const resultsDiv = document.getElementById('results');
+            
+            statusDiv.innerHTML = '<p>Testing receipts bucket...</p>';
+            resultsDiv.innerHTML = '';
+
+            try {
+                // Get current user
+                const { data: { user } } = await supabaseClient.auth.getUser();
+                if (!user) {
+                    statusDiv.innerHTML = '<p class="error">Not authenticated</p>';
+                    return;
+                }
+
+                // Try to list files in receipts bucket
+                const { data: files, error: listError } = await supabaseClient.storage
+                    .from('receipts')
+                    .list('', { limit: 10 });
+                
+                if (listError) {
+                    statusDiv.innerHTML = `<p class="error">Error listing files: ${listError.message}</p>`;
+                    
+                    // Try different bucket names
+                    const alternatives = ['receipt', 'documents', 'files', 'uploads'];
+                    resultsDiv.innerHTML = '<h3>Trying alternative bucket names:</h3>';
+                    
+                    for (const alt of alternatives) {
+                        const { data, error } = await supabaseClient.storage
+                            .from(alt)
+                            .list('', { limit: 1 });
+                        
+                        if (!error) {
+                            resultsDiv.innerHTML += `<p class="success">✅ Found working bucket: "${alt}"</p>`;
+                        } else {
+                            resultsDiv.innerHTML += `<p class="error">❌ ${alt}: ${error.message}</p>`;
+                        }
+                    }
+                } else {
+                    statusDiv.innerHTML = '<p class="success">✅ "receipts" bucket is accessible!</p>';
+                    
+                    let html = '<h3>Files in receipts bucket:</h3>';
+                    if (files && files.length > 0) {
+                        files.forEach(file => {
+                            html += `
+                                <div class="bucket">
+                                    <p><strong>${file.name}</strong></p>
+                                    <p>Size: ${(file.metadata?.size / 1024).toFixed(2)} KB</p>
+                                    <p>Created: ${new Date(file.created_at).toLocaleString()}</p>
+                                </div>
+                            `;
+                        });
+                    } else {
+                        html += '<p>No files found in bucket</p>';
+                    }
+                    resultsDiv.innerHTML = html;
+                }
+
+                // Also check what the actual storage path looks like in documents table
+                const { data: profile } = await supabaseClient
+                    .from('user_profiles')
+                    .select('current_workspace_id')
+                    .eq('auth_user_id', user.id)
+                    .single();
+
+                if (profile?.current_workspace_id) {
+                    const { data: docs } = await supabaseClient
+                        .from('documents')
+                        .select('storage_bucket, storage_path')
+                        .eq('workspace_id', profile.current_workspace_id)
+                        .limit(5);
+                    
+                    if (docs && docs.length > 0) {
+                        resultsDiv.innerHTML += '<h3>Document Storage Configuration:</h3>';
+                        resultsDiv.innerHTML += '<div class="code">' + JSON.stringify(docs, null, 2) + '</div>';
+                    }
+                }
+
+            } catch (error) {
+                statusDiv.innerHTML = `<p class="error">Error: ${error.message}</p>`;
+            }
+        }
+
+        async function listFilesInBucket() {
+            const statusDiv = document.getElementById('status');
+            const resultsDiv = document.getElementById('results');
+            
+            statusDiv.innerHTML = '<p>Listing files...</p>';
+            
+            try {
+                const { data: { user } } = await supabaseClient.auth.getUser();
+                if (!user) {
+                    statusDiv.innerHTML = '<p class="error">Not authenticated</p>';
+                    return;
+                }
+
+                // Get workspace
+                const { data: profile } = await supabaseClient
+                    .from('user_profiles')
+                    .select('current_workspace_id')
+                    .eq('auth_user_id', user.id)
+                    .single();
+
+                const workspaceId = profile?.current_workspace_id;
+                if (!workspaceId) {
+                    statusDiv.innerHTML = '<p class="error">No workspace</p>';
+                    return;
+                }
+
+                // Try different path patterns
+                const paths = [
+                    '', // root
+                    workspaceId, // workspace folder
+                    `${workspaceId}/`, // workspace folder with slash
+                ];
+
+                resultsDiv.innerHTML = '<h3>Checking different paths in storage:</h3>';
+
+                for (const path of paths) {
+                    resultsDiv.innerHTML += `<h4>Path: "${path || 'root'}"</h4>`;
+                    
+                    const { data: files, error } = await supabaseClient.storage
+                        .from('receipts')
+                        .list(path, { limit: 5 });
+                    
+                    if (error) {
+                        resultsDiv.innerHTML += `<p class="error">Error: ${error.message}</p>`;
+                    } else if (files && files.length > 0) {
+                        resultsDiv.innerHTML += '<div class="code">' + JSON.stringify(files, null, 2) + '</div>';
+                    } else {
+                        resultsDiv.innerHTML += '<p>No files found at this path</p>';
+                    }
+                }
+
+                statusDiv.innerHTML = '<p class="success">Check complete</p>';
+
+            } catch (error) {
+                statusDiv.innerHTML = `<p class="error">Error: ${error.message}</p>`;
+            }
+        }
+
+        // Auto-check on load
+        window.onload = () => {
+            checkBuckets();
+        };
+    </script>
+</body>
+</html>

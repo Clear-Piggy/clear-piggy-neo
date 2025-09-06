@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Verify Enriched Transaction Data</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <h1>Verify Enriched Transaction Data</h1>
+    <div id="results"></div>
+    
+    <script>
+        const { createClient } = supabase;
+        
+        // Initialize Supabase client
+        const supabaseClient = createClient(
+            'https://rnevebffhtplbixdmbgq.supabase.co',
+            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJuZXZlYmZmaHRwbGJpeGRtYmdxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzU0MzY1NzQsImV4cCI6MjA1MTAxMjU3NH0.xtRzVeqZ3_LI1xNJON-xaH85YYBrYXYhPdKOgqGNLXM'
+        );
+
+        async function verifyEnrichment() {
+            const resultsDiv = document.getElementById('results');
+            const workspaceId = '06bdb357-0778-472b-808a-78d11daeeb4f';
+            
+            try {
+                // Check enrichment coverage
+                console.log('Checking enrichment coverage...');
+                const { data: coverage, error: coverageError } = await supabaseClient
+                    .from('feed_transactions')
+                    .select(`
+                        id,
+                        merchant_name,
+                        merchant_logo_url,
+                        merchant_website,
+                        location_city,
+                        personal_finance_category_primary,
+                        personal_finance_category_detailed,
+                        category_primary,
+                        payment_method
+                    `)
+                    .eq('workspace_id', workspaceId);
+
+                if (coverageError) {
+                    console.error('Coverage query error:', coverageError);
+                    resultsDiv.innerHTML = `<p>Error: ${coverageError.message}</p>`;
+                    return;
+                }
+
+                const totalTransactions = coverage.length;
+                const hasMerchantName = coverage.filter(t => t.merchant_name).length;
+                const hasMerchantLogo = coverage.filter(t => t.merchant_logo_url).length;
+                const hasMerchantWebsite = coverage.filter(t => t.merchant_website).length;
+                const hasLocation = coverage.filter(t => t.location_city).length;
+                const hasPFCPrimary = coverage.filter(t => t.personal_finance_category_primary).length;
+                const hasPFCDetailed = coverage.filter(t => t.personal_finance_category_detailed).length;
+                const hasLegacyCategory = coverage.filter(t => t.category_primary).length;
+                const hasPaymentMethod = coverage.filter(t => t.payment_method).length;
+
+                const merchantCoveragePct = Math.round(100 * hasMerchantName / totalTransactions * 10) / 10;
+                const pfcCoveragePct = Math.round(100 * hasPFCPrimary / totalTransactions * 10) / 10;
+
+                let html = `
+                    <h2>📊 ENRICHMENT COVERAGE AFTER SYNC:</h2>
+                    <table border="1" cellpadding="10">
+                        <tr><td>Total Transactions</td><td>${totalTransactions}</td></tr>
+                        <tr><td>Has Merchant Name</td><td>${hasMerchantName}</td></tr>
+                        <tr><td>Has Merchant Logo</td><td>${hasMerchantLogo}</td></tr>
+                        <tr><td>Has Merchant Website</td><td>${hasMerchantWebsite}</td></tr>
+                        <tr><td>Has Location</td><td>${hasLocation}</td></tr>
+                        <tr><td>Has PFC Primary</td><td>${hasPFCPrimary}</td></tr>
+                        <tr><td>Has PFC Detailed</td><td>${hasPFCDetailed}</td></tr>
+                        <tr><td>Has Legacy Category</td><td>${hasLegacyCategory}</td></tr>
+                        <tr><td>Has Payment Method</td><td>${hasPaymentMethod}</td></tr>
+                        <tr><td><strong>Merchant Coverage %</strong></td><td><strong>${merchantCoveragePct}%</strong></td></tr>
+                        <tr><td><strong>PFC Coverage %</strong></td><td><strong>${pfcCoveragePct}%</strong></td></tr>
+                    </table>
+                `;
+
+                // Get sample enriched transactions
+                const { data: samples, error: samplesError } = await supabaseClient
+                    .from('feed_transactions')
+                    .select(`
+                        transaction_date,
+                        description,
+                        amount_cents,
+                        merchant_name,
+                        merchant_logo_url,
+                        location_city,
+                        location_region,
+                        personal_finance_category_primary,
+                        personal_finance_category_detailed,
+                        payment_method
+                    `)
+                    .eq('workspace_id', workspaceId)
+                    .not('plaid_transaction_id', 'is', null)
+                    .order('transaction_date', { ascending: false })
+                    .limit(10);
+
+                if (!samplesError && samples.length > 0) {
+                    html += `
+                        <h2>🔍 SAMPLE ENRICHED TRANSACTIONS:</h2>
+                        <table border="1" cellpadding="5">
+                            <tr>
+                                <th>Date</th>
+                                <th>Description</th>
+                                <th>Amount</th>
+                                <th>Merchant</th>
+                                <th>Logo</th>
+                                <th>Location</th>
+                                <th>Category</th>
+                                <th>Payment Method</th>
+                            </tr>
+                    `;
+                    
+                    samples.forEach(tx => {
+                        const amount = (tx.amount_cents / 100).toFixed(2);
+                        const logoIcon = tx.merchant_logo_url ? '🖼️' : '❌';
+                        const locationText = tx.location_city ? `${tx.location_city}, ${tx.location_region || ''}` : '❌';
+                        
+                        html += `
+                            <tr>
+                                <td>${tx.transaction_date}</td>
+                                <td>${tx.description}</td>
+                                <td>$${amount}</td>
+                                <td>${tx.merchant_name || '❌'}</td>
+                                <td>${logoIcon}</td>
+                                <td>${locationText}</td>
+                                <td>${tx.personal_finance_category_primary || '❌'}</td>
+                                <td>${tx.payment_method || '❌'}</td>
+                            </tr>
+                        `;
+                    });
+                    
+                    html += `</table>`;
+                }
+
+                // Category breakdown
+                const categoryBreakdown = {};
+                coverage.forEach(tx => {
+                    if (tx.personal_finance_category_primary) {
+                        if (!categoryBreakdown[tx.personal_finance_category_primary]) {
+                            categoryBreakdown[tx.personal_finance_category_primary] = {
+                                count: 0,
+                                amount: 0
+                            };
+                        }
+                        categoryBreakdown[tx.personal_finance_category_primary].count++;
+                        categoryBreakdown[tx.personal_finance_category_primary].amount += tx.amount_cents || 0;
+                    }
+                });
+
+                if (Object.keys(categoryBreakdown).length > 0) {
+                    html += `
+                        <h2>📈 CATEGORY BREAKDOWN:</h2>
+                        <table border="1" cellpadding="5">
+                            <tr><th>Category</th><th>Transaction Count</th><th>Total Amount</th></tr>
+                    `;
+                    
+                    Object.entries(categoryBreakdown)
+                        .sort(([,a], [,b]) => b.count - a.count)
+                        .forEach(([category, data]) => {
+                            const amount = (data.amount / 100).toFixed(2);
+                            html += `
+                                <tr>
+                                    <td>${category}</td>
+                                    <td>${data.count}</td>
+                                    <td>$${amount}</td>
+                                </tr>
+                            `;
+                        });
+                    
+                    html += `</table>`;
+                }
+
+                // Merchants with logos
+                const merchantLogos = coverage.filter(tx => tx.merchant_logo_url && tx.merchant_name);
+                if (merchantLogos.length > 0) {
+                    const merchantGroups = {};
+                    merchantLogos.forEach(tx => {
+                        const key = `${tx.merchant_name}|${tx.merchant_logo_url}`;
+                        merchantGroups[key] = (merchantGroups[key] || 0) + 1;
+                    });
+
+                    html += `
+                        <h2>🏪 MERCHANTS WITH LOGOS:</h2>
+                        <table border="1" cellpadding="5">
+                            <tr><th>Merchant</th><th>Logo URL</th><th>Transaction Count</th></tr>
+                    `;
+                    
+                    Object.entries(merchantGroups)
+                        .sort(([,a], [,b]) => b - a)
+                        .slice(0, 10)
+                        .forEach(([key, count]) => {
+                            const [merchantName, logoUrl] = key.split('|');
+                            html += `
+                                <tr>
+                                    <td>${merchantName}</td>
+                                    <td><a href="${logoUrl}" target="_blank">View Logo</a></td>
+                                    <td>${count}</td>
+                                </tr>
+                            `;
+                        });
+                    
+                    html += `</table>`;
+                }
+
+                resultsDiv.innerHTML = html;
+                
+                // Also log to console for debugging
+                console.log('✅ ENRICHMENT VERIFICATION COMPLETE');
+                console.log(`Total transactions: ${totalTransactions}`);
+                console.log(`Merchant coverage: ${merchantCoveragePct}%`);
+                console.log(`PFC coverage: ${pfcCoveragePct}%`);
+                
+            } catch (error) {
+                console.error('Verification error:', error);
+                resultsDiv.innerHTML = `<p>Error: ${error.message}</p>`;
+            }
+        }
+
+        // Run verification when page loads
+        window.addEventListener('load', verifyEnrichment);
+    </script>
+</body>
+</html>

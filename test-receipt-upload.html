@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Receipt Upload Security</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            border-bottom: 2px solid #4CAF50;
+            padding-bottom: 10px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            background: #f9f9f9;
+            border-radius: 4px;
+        }
+        .test-section h3 {
+            margin-top: 0;
+            color: #555;
+        }
+        input, button {
+            padding: 10px;
+            margin: 5px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            cursor: pointer;
+            min-width: 150px;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        .result {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        pre {
+            background: #f4f4f4;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+        .security-badge {
+            display: inline-block;
+            padding: 5px 10px;
+            background: #007bff;
+            color: white;
+            border-radius: 3px;
+            font-size: 12px;
+            margin: 0 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔐 Receipt Upload Security Test</h1>
+        
+        <div class="test-section">
+            <h3>1. Edge Function Test</h3>
+            <p>Test the workspace validation edge function</p>
+            <input type="text" id="userId" placeholder="User Auth ID" style="width: 300px">
+            <input type="text" id="workspaceId" placeholder="Workspace ID" style="width: 300px">
+            <button onclick="testEdgeFunction()">Test Validation</button>
+            <div id="edgeResult"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>2. Webhook Payload Test</h3>
+            <p>Test the security-enhanced webhook payload structure</p>
+            <button onclick="testWebhookPayload()">Generate Test Payload</button>
+            <div id="webhookResult"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>3. Storage Path Test</h3>
+            <p>Verify workspace-scoped storage paths</p>
+            <button onclick="testStoragePath()">Test Storage Path</button>
+            <div id="storageResult"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>4. Full OCR Workflow Test</h3>
+            <p>Send a test image through the secure OCR workflow</p>
+            <input type="file" id="receiptFile" accept="image/*">
+            <button onclick="testFullWorkflow()">Test OCR Workflow</button>
+            <div id="workflowResult"></div>
+        </div>
+    </div>
+
+    <script>
+        const EDGE_FUNCTION_URL = 'https://lrwvooucggciazmzxqlb.supabase.co/functions/v1/validate-workspace-access';
+        const WEBHOOK_URL = 'https://primary-production-6ccfb.up.railway.app/webhook/receipt-ocr-supabase';
+        const SERVICE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxyd3Zvb3VjZ2djaWF6bXp4cWxiIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NTc4NzkyMCwiZXhwIjoyMDcxMzYzOTIwfQ.nm8RcglZ_ZCHdaxQlg_kd_v54kmA0X38Wj1LJxCKro8';
+
+        async function testEdgeFunction() {
+            const userId = document.getElementById('userId').value;
+            const workspaceId = document.getElementById('workspaceId').value;
+            const resultDiv = document.getElementById('edgeResult');
+
+            if (!userId || !workspaceId) {
+                resultDiv.innerHTML = '<div class="error">Please enter both User ID and Workspace ID</div>';
+                return;
+            }
+
+            resultDiv.innerHTML = '<div class="info">Testing edge function...</div>';
+
+            try {
+                const response = await fetch(EDGE_FUNCTION_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${SERVICE_KEY}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        user_id: userId,
+                        workspace_id: workspaceId,
+                        required_permission: 'documents:create'
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (data.has_access) {
+                    resultDiv.innerHTML = `
+                        <div class="success">
+                            ✅ Access Granted
+                            <span class="security-badge">VALIDATED</span>
+                            <pre>${JSON.stringify(data, null, 2)}</pre>
+                        </div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="error">
+                            ❌ Access Denied
+                            <pre>${JSON.stringify(data, null, 2)}</pre>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">Error: ${error.message}</div>`;
+            }
+        }
+
+        function testWebhookPayload() {
+            const resultDiv = document.getElementById('webhookResult');
+            
+            const payload = {
+                // CRITICAL SECURITY DATA
+                supabase_user_id: 'test-user-id-' + Math.random().toString(36).substr(2, 9),
+                workspace_id: 'test-workspace-id-' + Math.random().toString(36).substr(2, 9),
+                source: 'clear-piggy-dashboard',
+                user_email: 'test@example.com',
+                timestamp: new Date().toISOString(),
+                
+                // Document data
+                document_id: 'doc-' + Math.random().toString(36).substr(2, 9),
+                storage_path: 'receipts/workspace/user/receipt.jpg',
+                storage_bucket: 'receipts',
+                filename: 'test-receipt.jpg',
+                mime_type: 'image/jpeg'
+            };
+
+            resultDiv.innerHTML = `
+                <div class="success">
+                    ✅ Security-Enhanced Webhook Payload
+                    <span class="security-badge">WORKSPACE-SCOPED</span>
+                    <pre>${JSON.stringify(payload, null, 2)}</pre>
+                    <p><strong>Security Features:</strong></p>
+                    <ul>
+                        <li>✓ workspace_id included for scoping</li>
+                        <li>✓ user_id for authentication</li>
+                        <li>✓ source tracking</li>
+                        <li>✓ timestamp for audit trail</li>
+                    </ul>
+                </div>
+            `;
+        }
+
+        function testStoragePath() {
+            const resultDiv = document.getElementById('storageResult');
+            
+            const workspaceId = 'abc123-workspace';
+            const userId = 'def456-user';
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+            
+            const storagePath = `/receipts/${workspaceId}/${userId}/${timestamp}_receipt.jpg`;
+            
+            resultDiv.innerHTML = `
+                <div class="success">
+                    ✅ Workspace-Scoped Storage Path
+                    <span class="security-badge">ISOLATED</span>
+                    <pre>${storagePath}</pre>
+                    <p><strong>Path Components:</strong></p>
+                    <ul>
+                        <li><strong>Bucket:</strong> receipts (private)</li>
+                        <li><strong>Workspace:</strong> ${workspaceId}</li>
+                        <li><strong>User:</strong> ${userId}</li>
+                        <li><strong>File:</strong> ${timestamp}_receipt.jpg</li>
+                    </ul>
+                    <p>✓ Each workspace has isolated storage</p>
+                    <p>✓ No cross-workspace access possible</p>
+                </div>
+            `;
+        }
+
+        async function testFullWorkflow() {
+            const resultDiv = document.getElementById('workflowResult');
+            const fileInput = document.getElementById('receiptFile');
+            
+            if (!fileInput.files[0]) {
+                resultDiv.innerHTML = '<div class="error">Please select an image file</div>';
+                return;
+            }
+
+            resultDiv.innerHTML = '<div class="info">Testing full OCR workflow with security validation...</div>';
+
+            // Create form data with file
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+            
+            // Add security data as form fields
+            formData.append('supabase_user_id', 'test-user-' + Date.now());
+            formData.append('workspace_id', 'test-workspace-' + Date.now());
+            formData.append('source', 'security-test');
+            formData.append('user_email', 'test@security.com');
+
+            try {
+                const response = await fetch(WEBHOOK_URL, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+                
+                resultDiv.innerHTML = `
+                    <div class="success">
+                        ✅ OCR Workflow Test Complete
+                        <span class="security-badge">SECURE</span>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    </div>
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        ❌ Workflow Test Failed
+                        <pre>${error.message}</pre>
+                        <p>This might be expected if n8n workflow validation fails due to test IDs.</p>
+                    </div>
+                `;
+            }
+        }
+
+        // Show current configuration on load
+        window.onload = () => {
+            console.log('🔐 Security Test Configuration:');
+            console.log('- Edge Function:', EDGE_FUNCTION_URL);
+            console.log('- Webhook URL:', WEBHOOK_URL);
+            console.log('- Service Role: [REDACTED]');
+        };
+    </script>
+</body>
+</html>

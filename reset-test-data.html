@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Reset Test Data - Fresh Start</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <h1>🔄 Reset Test Data for Fresh Testing</h1>
+    <div id="results"></div>
+    <button onclick="resetAllData()" style="padding: 10px 20px; font-size: 16px; background: #ff4444; color: white; border: none; border-radius: 5px; cursor: pointer;">
+        🗑️ RESET ALL DATA
+    </button>
+    
+    <script>
+        const { createClient } = supabase;
+        
+        // Initialize Supabase client
+        const supabaseClient = createClient(
+            'https://rnevebffhtplbixdmbgq.supabase.co',
+            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJuZXZlYmZmaHRwbGJpeGRtYmdxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzU0MzY1NzQsImV4cCI6MjA1MTAxMjU3NH0.xtRzVeqZ3_LI1xNJON-xaH85YYBrYXYhPdKOgqGNLXM'
+        );
+
+        async function resetAllData() {
+            const resultsDiv = document.getElementById('results');
+            const testEmail = 'test123@gmail.com';
+            
+            try {
+                resultsDiv.innerHTML = '<p>🔄 Starting data reset...</p>';
+                
+                // Step 1: Find user and workspace
+                console.log('Finding user profile...');
+                const { data: userProfile, error: userError } = await supabaseClient
+                    .from('user_profiles')
+                    .select('id, workspace_id')
+                    .eq('email', testEmail)
+                    .single();
+
+                if (userError && userError.code !== 'PGRST116') {
+                    throw new Error(`Error finding user: ${userError.message}`);
+                }
+
+                let deletionResults = [];
+
+                if (userProfile) {
+                    const userId = userProfile.id;
+                    const workspaceId = userProfile.workspace_id;
+                    
+                    resultsDiv.innerHTML += `<p>📍 Found user: ${userId}</p>`;
+                    resultsDiv.innerHTML += `<p>📍 Found workspace: ${workspaceId}</p>`;
+
+                    // Step 2: Delete transactions
+                    console.log('Deleting transactions...');
+                    const { data: txDelete, error: txError } = await supabaseClient
+                        .from('feed_transactions')
+                        .delete()
+                        .eq('workspace_id', workspaceId);
+                    
+                    if (txError) {
+                        console.warn('Transaction deletion error:', txError);
+                        deletionResults.push(`⚠️ Transactions: ${txError.message}`);
+                    } else {
+                        deletionResults.push('✅ Transactions deleted');
+                    }
+
+                    // Step 3: Delete bank accounts
+                    console.log('Deleting bank accounts...');
+                    const { data: bankDelete, error: bankError } = await supabaseClient
+                        .from('bank_accounts')
+                        .delete()
+                        .eq('workspace_id', workspaceId);
+                    
+                    if (bankError) {
+                        console.warn('Bank accounts deletion error:', bankError);
+                        deletionResults.push(`⚠️ Bank accounts: ${bankError.message}`);
+                    } else {
+                        deletionResults.push('✅ Bank accounts deleted');
+                    }
+
+                    // Step 4: Delete institutions
+                    console.log('Deleting institutions...');
+                    const { data: instDelete, error: instError } = await supabaseClient
+                        .from('institutions')
+                        .delete()
+                        .eq('workspace_id', workspaceId);
+                    
+                    if (instError) {
+                        console.warn('Institutions deletion error:', instError);
+                        deletionResults.push(`⚠️ Institutions: ${instError.message}`);
+                    } else {
+                        deletionResults.push('✅ Institutions deleted');
+                    }
+
+                    // Step 5: Delete workspace memberships
+                    console.log('Deleting workspace memberships...');
+                    const { data: memberDelete, error: memberError } = await supabaseClient
+                        .from('workspace_memberships')
+                        .delete()
+                        .eq('workspace_id', workspaceId);
+                    
+                    if (memberError) {
+                        console.warn('Workspace memberships deletion error:', memberError);
+                        deletionResults.push(`⚠️ Workspace memberships: ${memberError.message}`);
+                    } else {
+                        deletionResults.push('✅ Workspace memberships deleted');
+                    }
+
+                    // Step 6: Delete workspace
+                    console.log('Deleting workspace...');
+                    const { data: workspaceDelete, error: workspaceError } = await supabaseClient
+                        .from('workspaces')
+                        .delete()
+                        .eq('id', workspaceId);
+                    
+                    if (workspaceError) {
+                        console.warn('Workspace deletion error:', workspaceError);
+                        deletionResults.push(`⚠️ Workspace: ${workspaceError.message}`);
+                    } else {
+                        deletionResults.push('✅ Workspace deleted');
+                    }
+
+                    // Step 7: Delete user profile
+                    console.log('Deleting user profile...');
+                    const { data: profileDelete, error: profileError } = await supabaseClient
+                        .from('user_profiles')
+                        .delete()
+                        .eq('id', userId);
+                    
+                    if (profileError) {
+                        console.warn('User profile deletion error:', profileError);
+                        deletionResults.push(`⚠️ User profile: ${profileError.message}`);
+                    } else {
+                        deletionResults.push('✅ User profile deleted');
+                    }
+
+                } else {
+                    deletionResults.push('ℹ️ No user profile found - database already clean');
+                }
+
+                // Step 8: Verify cleanup
+                console.log('Verifying cleanup...');
+                const { data: remainingUsers, error: verifyError } = await supabaseClient
+                    .from('user_profiles')
+                    .select('id')
+                    .eq('email', testEmail);
+
+                if (verifyError) {
+                    deletionResults.push(`⚠️ Verification error: ${verifyError.message}`);
+                } else {
+                    const userCount = remainingUsers?.length || 0;
+                    deletionResults.push(`✅ Verification: ${userCount} users remaining with test email`);
+                }
+
+                // Display results
+                const resultHtml = `
+                    <h2>🎯 Data Reset Complete</h2>
+                    <div style="background: #f0f0f0; padding: 15px; border-radius: 5px; margin: 10px 0;">
+                        ${deletionResults.map(result => `<p>${result}</p>`).join('')}
+                    </div>
+                    <h3>🆕 Ready for Fresh Testing!</h3>
+                    <p>You can now:</p>
+                    <ol>
+                        <li>Sign up with test123@gmail.com</li>
+                        <li>Create a new workspace</li>
+                        <li>Connect a bank account via Plaid</li>
+                        <li>Test transaction sync with enrichment</li>
+                    </ol>
+                `;
+
+                resultsDiv.innerHTML = resultHtml;
+                
+                console.log('✅ DATA RESET COMPLETE');
+                console.log('Results:', deletionResults);
+                
+            } catch (error) {
+                console.error('Reset error:', error);
+                resultsDiv.innerHTML = `<div style="color: red; padding: 10px; background: #ffeeee; border-radius: 5px;">
+                    <h3>❌ Reset Error</h3>
+                    <p>${error.message}</p>
+                </div>`;
+            }
+        }
+
+        // Show initial status
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('results').innerHTML = `
+                <p>🎯 Ready to reset all test data for user: <strong>test123@gmail.com</strong></p>
+                <p>This will delete:</p>
+                <ul>
+                    <li>All transactions</li>
+                    <li>All bank accounts</li>
+                    <li>All institutions</li>
+                    <li>Workspace membership</li>
+                    <li>Workspace</li>
+                    <li>User profile</li>
+                </ul>
+                <p><strong>Click the red button above to proceed.</strong></p>
+            `;
+        });
+    </script>
+</body>
+</html>

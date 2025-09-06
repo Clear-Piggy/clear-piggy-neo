@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Test Receipts</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .receipt {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+        .status {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .status-processed { background: #d4edda; color: #155724; }
+        .status-processing { background: #cce5ff; color: #004085; }
+        .status-uploaded { background: #fff3cd; color: #856404; }
+        .status-error { background: #f8d7da; color: #721c24; }
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        .ocr-data {
+            background: #f0f0f0;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Receipt Documents Test</h1>
+    <button onclick="checkReceipts()">Check Receipts</button>
+    <button onclick="clearReceipts()" style="background: #ff4444;">Clear All Receipts</button>
+    <div id="status"></div>
+    <div id="receipts"></div>
+
+    <script>
+        const SUPABASE_URL = 'https://lrwvooucggciazmzxqlb.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxyd3ZvdWNnZ2NpYXptenp4cWxiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MjgwNjkyNzUsImV4cCI6MjA0MzY0NTI3NX0.tKwwPiaFLRql6M8UbfVPkr4e7dAOA_BQMpEQdPHCLe0';
+        
+        const { createClient } = supabase;
+        const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        async function checkReceipts() {
+            const statusDiv = document.getElementById('status');
+            const receiptsDiv = document.getElementById('receipts');
+            
+            statusDiv.innerHTML = 'Loading...';
+            receiptsDiv.innerHTML = '';
+
+            try {
+                // Get current user
+                const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
+                if (!user) {
+                    statusDiv.innerHTML = '<p style="color: red;">Not authenticated. Please sign in.</p>';
+                    return;
+                }
+
+                // Get workspace
+                const { data: profile } = await supabaseClient
+                    .from('user_profiles')
+                    .select('current_workspace_id')
+                    .eq('auth_user_id', user.id)
+                    .single();
+
+                if (!profile?.current_workspace_id) {
+                    statusDiv.innerHTML = '<p style="color: red;">No workspace found.</p>';
+                    return;
+                }
+
+                // Get documents
+                const { data: documents, error } = await supabaseClient
+                    .from('documents')
+                    .select('*')
+                    .eq('workspace_id', profile.current_workspace_id)
+                    .eq('document_type', 'receipt')
+                    .order('created_at', { ascending: false });
+
+                if (error) {
+                    throw error;
+                }
+
+                if (!documents || documents.length === 0) {
+                    statusDiv.innerHTML = '<p style="color: orange;">No receipts found. Upload some receipts first!</p>';
+                    return;
+                }
+
+                statusDiv.innerHTML = `<p style="color: green;">Found ${documents.length} receipt(s)</p>`;
+
+                let html = '';
+                documents.forEach(doc => {
+                    const ocr = doc.ocr_metadata || {};
+                    html += `
+                        <div class="receipt">
+                            <h3>${ocr.merchant_name || doc.filename}</h3>
+                            <p>
+                                Status: <span class="status status-${doc.processing_status}">${doc.processing_status}</span>
+                                | Created: ${new Date(doc.created_at).toLocaleString()}
+                            </p>
+                            ${ocr.total_amount ? `<p><strong>Total: $${ocr.total_amount.toFixed(2)}</strong></p>` : ''}
+                            ${ocr.transaction_date ? `<p>Date: ${new Date(ocr.transaction_date).toLocaleDateString()}</p>` : ''}
+                            ${ocr.location ? `<p>Location: ${ocr.location}</p>` : ''}
+                            ${ocr.confidence_score ? `<p>Confidence: ${(ocr.confidence_score * 100).toFixed(0)}%</p>` : ''}
+                            <div class="ocr-data">
+                                <strong>Raw OCR Data:</strong>
+                                <pre>${JSON.stringify(ocr, null, 2)}</pre>
+                            </div>
+                            <p style="color: #666; font-size: 12px;">ID: ${doc.id}</p>
+                        </div>
+                    `;
+                });
+
+                receiptsDiv.innerHTML = html;
+
+            } catch (error) {
+                console.error('Error:', error);
+                statusDiv.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
+            }
+        }
+
+        async function clearReceipts() {
+            if (!confirm('Are you sure you want to delete ALL receipts? This cannot be undone!')) {
+                return;
+            }
+
+            const statusDiv = document.getElementById('status');
+            statusDiv.innerHTML = 'Clearing receipts...';
+
+            try {
+                const { data: { user } } = await supabaseClient.auth.getUser();
+                if (!user) {
+                    alert('Not authenticated');
+                    return;
+                }
+
+                const { data: profile } = await supabaseClient
+                    .from('user_profiles')
+                    .select('current_workspace_id')
+                    .eq('auth_user_id', user.id)
+                    .single();
+
+                if (!profile?.current_workspace_id) {
+                    alert('No workspace');
+                    return;
+                }
+
+                const { error } = await supabaseClient
+                    .from('documents')
+                    .delete()
+                    .eq('workspace_id', profile.current_workspace_id)
+                    .eq('document_type', 'receipt');
+
+                if (error) throw error;
+
+                statusDiv.innerHTML = '<p style="color: green;">All receipts cleared!</p>';
+                document.getElementById('receipts').innerHTML = '';
+
+            } catch (error) {
+                console.error('Error:', error);
+                statusDiv.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
+            }
+        }
+
+        // Auto-check on load
+        window.onload = () => {
+            checkReceipts();
+        };
+    </script>
+</body>
+</html>

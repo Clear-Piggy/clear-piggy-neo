@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Check Workspace Schema</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <h1>Checking Workspace Table Schema</h1>
+    <pre id="results"></pre>
+
+    <script>
+        const { createClient } = supabase;
+        const supabaseUrl = 'https://rnevebffhtplbixdmbgq.supabase.co';
+        const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJuZXZlYmZmaHRwbGJpeGRtYmdxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzQ0MDg4MzMsImV4cCI6MjA1MDA4NDgzM30.8BK94YT19_fCjCKcRn0K4kHRrbMmomtsgnEiXBCfhKg';
+        
+        const client = createClient(supabaseUrl, supabaseAnonKey);
+        const results = document.getElementById('results');
+        
+        async function checkSchema() {
+            try {
+                // Try to select the fields
+                const { data, error } = await client
+                    .from('workspaces')
+                    .select('id, name, workspace_type, onboarding_completed')
+                    .limit(1);
+                
+                if (error) {
+                    results.textContent = 'Error checking schema:\n' + JSON.stringify(error, null, 2);
+                    
+                    // Try without the new fields
+                    const { data: data2, error: error2 } = await client
+                        .from('workspaces')
+                        .select('*')
+                        .limit(1);
+                    
+                    if (!error2 && data2 && data2.length > 0) {
+                        results.textContent += '\n\nCurrent workspace fields:\n' + JSON.stringify(Object.keys(data2[0]), null, 2);
+                    }
+                } else {
+                    results.textContent = '✅ Fields exist! Sample data:\n' + JSON.stringify(data, null, 2);
+                }
+                
+            } catch (err) {
+                results.textContent = 'Error: ' + err.message;
+            }
+        }
+        
+        checkSchema();
+    </script>
+</body>
+</html>

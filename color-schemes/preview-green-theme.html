@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clear Piggy - Green Gradient Theme Preview</title>
+    <link rel="stylesheet" href="green-gradient-theme.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            transition: all 0.3s ease;
+        }
+        
+        .light-mode {
+            background: var(--bg-primary);
+            color: var(--text-primary);
+        }
+        
+        .dark-mode {
+            background: var(--bg-primary);
+            color: var(--text-primary);
+        }
+        
+        .container {
+            max-width: 1440px;
+            margin: 0 auto;
+            display: flex;
+            min-height: 100vh;
+        }
+        
+        .sidebar {
+            width: 280px;
+            padding: 32px 16px;
+        }
+        
+        .main-content {
+            flex: 1;
+            padding: 32px;
+            overflow-y: auto;
+        }
+        
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 24px;
+            margin-bottom: 32px;
+        }
+        
+        .section-title {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 24px;
+            background: var(--gradient-emerald);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .logo {
+            font-size: 28px;
+            font-weight: 800;
+            margin-bottom: 48px;
+            background: var(--gradient-mint);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .nav-item {
+            padding: 12px 16px;
+            margin-bottom: 8px;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .nav-icon {
+            width: 20px;
+            height: 20px;
+            background: currentColor;
+            border-radius: 4px;
+        }
+        
+        .theme-toggle {
+            position: fixed;
+            top: 32px;
+            right: 32px;
+            z-index: 1000;
+        }
+        
+        .transactions-list {
+            background: var(--bg-card);
+            border-radius: 16px;
+            padding: 24px;
+            margin-top: 32px;
+        }
+        
+        .chart-placeholder {
+            height: 300px;
+            background: var(--gradient-soft-emerald);
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .chart-bars {
+            display: flex;
+            align-items: flex-end;
+            gap: 12px;
+            height: 150px;
+        }
+        
+        .bar {
+            width: 30px;
+            background: var(--gradient-emerald);
+            border-radius: 8px 8px 0 0;
+            animation: grow 1s ease-out;
+        }
+        
+        @keyframes grow {
+            from { height: 0; }
+        }
+        
+        .balance-display {
+            font-size: 36px;
+            font-weight: 700;
+            margin: 16px 0;
+        }
+        
+        .badge-container {
+            display: flex;
+            gap: 12px;
+            margin: 24px 0;
+            flex-wrap: wrap;
+        }
+    </style>
+</head>
+<body class="dashboard-light light-mode">
+    <div class="theme-toggle">
+        <button class="btn-primary" onclick="toggleTheme()">Toggle Dark/Light</button>
+    </div>
+    
+    <div class="container">
+        <!-- Sidebar -->
+        <div class="sidebar sidebar-green">
+            <div class="logo">🐷 Clear Piggy</div>
+            
+            <div class="sidebar-item nav-item active">
+                <div class="nav-icon"></div>
+                <span>Dashboard</span>
+            </div>
+            <div class="sidebar-item nav-item">
+                <div class="nav-icon"></div>
+                <span>Transactions</span>
+            </div>
+            <div class="sidebar-item nav-item">
+                <div class="nav-icon"></div>
+                <span>Budgets</span>
+            </div>
+            <div class="sidebar-item nav-item">
+                <div class="nav-icon"></div>
+                <span>Analytics</span>
+            </div>
+            <div class="sidebar-item nav-item">
+                <div class="nav-icon"></div>
+                <span>Settings</span>
+            </div>
+        </div>
+        
+        <!-- Main Content -->
+        <div class="main-content">
+            <h1 class="section-title">Financial Overview</h1>
+            
+            <!-- Metric Cards -->
+            <div class="grid">
+                <div class="metric-card card-gradient">
+                    <div style="color: var(--text-muted); font-size: 14px;">Total Balance</div>
+                    <div class="balance-display" style="background: var(--gradient-emerald); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+                        $24,853.50
+                    </div>
+                    <div style="color: var(--success); font-size: 14px;">↑ 12.5% from last month</div>
+                </div>
+                
+                <div class="metric-card card-gradient">
+                    <div style="color: var(--text-muted); font-size: 14px;">Monthly Income</div>
+                    <div class="balance-display" style="background: var(--gradient-mint); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+                        $8,450.00
+                    </div>
+                    <div style="color: var(--success); font-size: 14px;">↑ 8.2% from last month</div>
+                </div>
+                
+                <div class="metric-card card-gradient">
+                    <div style="color: var(--text-muted); font-size: 14px;">Monthly Expenses</div>
+                    <div class="balance-display" style="background: var(--gradient-forest); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+                        $5,230.75
+                    </div>
+                    <div style="color: var(--warning); font-size: 14px;">↑ 3.1% from last month</div>
+                </div>
+                
+                <div class="metric-card card-gradient">
+                    <div style="color: var(--text-muted); font-size: 14px;">Net Cash Flow</div>
+                    <div class="balance-display" style="background: var(--gradient-lime); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+                        +$3,219.25
+                    </div>
+                    <div style="color: var(--success); font-size: 14px;">Positive cash flow</div>
+                </div>
+            </div>
+            
+            <!-- Chart Section -->
+            <div class="chart-container">
+                <h2 style="margin-bottom: 24px; color: var(--text-primary);">Cash Flow Trend</h2>
+                <div class="chart-placeholder">
+                    <div class="chart-bars">
+                        <div class="bar" style="height: 60%; background: var(--gradient-mint);"></div>
+                        <div class="bar" style="height: 80%; background: var(--gradient-emerald);"></div>
+                        <div class="bar" style="height: 45%; background: var(--gradient-forest);"></div>
+                        <div class="bar" style="height: 90%; background: var(--gradient-lime);"></div>
+                        <div class="bar" style="height: 70%; background: var(--gradient-teal);"></div>
+                        <div class="bar" style="height: 85%; background: var(--gradient-mint);"></div>
+                        <div class="bar" style="height: 65%; background: var(--gradient-emerald);"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Status Badges -->
+            <div class="badge-container">
+                <span class="status-badge success">✓ Connected</span>
+                <span class="status-badge pending">⏱ Syncing</span>
+                <span class="status-badge success">✓ Secured</span>
+            </div>
+            
+            <!-- Transactions List -->
+            <div class="transactions-list">
+                <h2 style="margin-bottom: 24px;">Recent Transactions</h2>
+                
+                <div class="transaction-item transaction-income">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <div style="font-weight: 600;">Salary Deposit</div>
+                            <div style="font-size: 14px; color: var(--text-muted);">Direct Deposit • Today</div>
+                        </div>
+                        <div style="color: var(--success); font-weight: 600; font-size: 18px;">+$3,200.00</div>
+                    </div>
+                </div>
+                
+                <div class="transaction-item transaction-expense" style="margin-top: 12px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <div style="font-weight: 600;">Whole Foods Market</div>
+                            <div style="font-size: 14px; color: var(--text-muted);">Groceries • Yesterday</div>
+                        </div>
+                        <div style="color: var(--error); font-weight: 600; font-size: 18px;">-$127.43</div>
+                    </div>
+                </div>
+                
+                <div class="transaction-item transaction-expense" style="margin-top: 12px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <div style="font-weight: 600;">Netflix</div>
+                            <div style="font-size: 14px; color: var(--text-muted);">Subscription • 2 days ago</div>
+                        </div>
+                        <div style="color: var(--error); font-weight: 600; font-size: 18px;">-$15.99</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Glassmorphism Card -->
+            <div class="glass-card-green" style="margin-top: 32px;">
+                <h3 style="margin-bottom: 16px;">Quick Actions</h3>
+                <div style="display: flex; gap: 16px; flex-wrap: wrap;">
+                    <button class="btn-primary">Sync Accounts</button>
+                    <button class="btn-primary" style="background: var(--gradient-mint);">Add Transaction</button>
+                    <button class="btn-primary" style="background: var(--gradient-forest);">View Reports</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Floating Action Button -->
+    <div class="fab">
+        <span style="color: white; font-size: 24px;">+</span>
+    </div>
+    
+    <script>
+        function toggleTheme() {
+            const body = document.body;
+            if (body.classList.contains('light-mode')) {
+                body.classList.remove('dashboard-light', 'light-mode');
+                body.classList.add('dashboard-dark', 'dark-mode');
+            } else {
+                body.classList.remove('dashboard-dark', 'dark-mode');
+                body.classList.add('dashboard-light', 'light-mode');
+            }
+        }
+    </script>
+</body>
+</html>

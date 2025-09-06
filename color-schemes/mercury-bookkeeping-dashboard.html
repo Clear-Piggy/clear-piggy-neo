@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bookkeeping Dashboard - Mercury Inspired</title>
+    <link rel="stylesheet" href="modern-sophisticated-theme.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+        }
+        
+        /* Mercury-style Top Navigation */
+        .top-nav {
+            height: 56px;
+            background: var(--bg-card);
+            border-bottom: 1px solid var(--border-subtle);
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        
+        .nav-logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-right: 48px;
+        }
+        
+        .nav-logo-icon {
+            width: 32px;
+            height: 32px;
+            background: var(--gradient-sage);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 700;
+            font-size: 16px;
+        }
+        
+        .nav-tabs {
+            display: flex;
+            gap: 32px;
+            flex: 1;
+        }
+        
+        .nav-tab {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            padding: 4px 0;
+            border-bottom: 2px solid transparent;
+            transition: all 0.15s ease;
+            cursor: pointer;
+        }
+        
+        .nav-tab:hover {
+            color: var(--text-secondary);
+        }
+        
+        .nav-tab.active {
+            color: var(--sage-600);
+            border-bottom-color: var(--sage-600);
+        }
+        
+        .nav-actions {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        
+        /* Page Layout */
+        .page-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 32px 24px;
+        }
+        
+        /* Page Header */
+        .page-header {
+            margin-bottom: 32px;
+        }
+        
+        .page-title-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 24px;
+        }
+        
+        .page-title {
+            font-size: 28px;
+            font-weight: 600;
+            letter-spacing: -0.02em;
+            color: var(--text-primary);
+        }
+        
+        .page-subtitle {
+            font-size: 14px;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+        
+        /* Filter Bar */
+        .filter-bar {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--border-subtle);
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+        }
+        
+        .filter-chip {
+            padding: 6px 12px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-subtle);
+            border-radius: 20px;
+            font-size: 13px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.15s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .filter-chip:hover {
+            background: var(--bg-hover);
+            border-color: var(--border-default);
+        }
+        
+        .filter-chip.active {
+            background: var(--sage-50);
+            border-color: var(--sage-400);
+            color: var(--sage-700);
+        }
+        
+        .modern-dark .filter-chip.active {
+            background: rgba(90, 116, 90, 0.15);
+            border-color: var(--sage-600);
+            color: var(--sage-300);
+        }
+        
+        /* Transaction Table */
+        .transaction-table {
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        
+        .table-toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border-subtle);
+            background: var(--bg-tertiary);
+        }
+        
+        .table-search {
+            position: relative;
+            width: 320px;
+        }
+        
+        .table-search input {
+            width: 100%;
+            padding: 8px 12px 8px 36px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-default);
+            border-radius: 8px;
+            font-size: 14px;
+            color: var(--text-primary);
+        }
+        
+        .search-icon {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 16px;
+            height: 16px;
+            opacity: 0.5;
+        }
+        
+        .table-actions {
+            display: flex;
+            gap: 8px;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        thead {
+            background: var(--bg-tertiary);
+            border-bottom: 1px solid var(--border-subtle);
+        }
+        
+        th {
+            text-align: left;
+            padding: 12px 20px;
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        
+        td {
+            padding: 16px 20px;
+            font-size: 14px;
+            color: var(--text-secondary);
+            border-bottom: 1px solid var(--border-subtle);
+        }
+        
+        tbody tr {
+            transition: background 0.15s ease;
+            cursor: pointer;
+        }
+        
+        tbody tr:hover {
+            background: var(--bg-hover);
+        }
+        
+        .transaction-checkbox {
+            width: 18px;
+            height: 18px;
+            border: 1px solid var(--border-default);
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        
+        .transaction-date {
+            color: var(--text-muted);
+            font-size: 13px;
+        }
+        
+        .transaction-description {
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+        
+        .transaction-merchant {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .merchant-icon {
+            width: 32px;
+            height: 32px;
+            background: var(--bg-tertiary);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+        }
+        
+        .transaction-category {
+            display: inline-block;
+            padding: 4px 8px;
+            background: var(--bg-tertiary);
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+        
+        .amount {
+            font-weight: 600;
+            font-family: 'SF Mono', 'Monaco', monospace;
+        }
+        
+        .amount.credit {
+            color: var(--success-muted);
+        }
+        
+        .amount.debit {
+            color: var(--text-primary);
+        }
+        
+        .transaction-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        
+        .status-pending {
+            background: rgba(161, 98, 7, 0.1);
+            color: var(--warning-muted);
+        }
+        
+        .status-cleared {
+            background: rgba(90, 116, 90, 0.1);
+            color: var(--success-muted);
+        }
+        
+        /* Stats Cards */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 20px;
+            margin-bottom: 32px;
+        }
+        
+        .stat-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: 12px;
+            padding: 20px;
+        }
+        
+        .stat-label {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            margin-bottom: 12px;
+            font-weight: 500;
+        }
+        
+        .stat-value {
+            font-size: 24px;
+            font-weight: 600;
+            color: var(--text-primary);
+            font-family: 'SF Mono', 'Monaco', monospace;
+        }
+        
+        .stat-change {
+            margin-top: 8px;
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+        
+        /* Bulk Actions Bar */
+        .bulk-actions {
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--stone-800);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.2s ease;
+        }
+        
+        .bulk-actions.show {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        
+        /* Quick Actions */
+        .quick-actions {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            align-items: flex-end;
+        }
+        
+        .fab-main {
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: var(--gradient-sage);
+            color: white;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            transition: all 0.3s ease;
+            font-size: 24px;
+        }
+        
+        .fab-main:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+        }
+        
+        /* Date Range Picker */
+        .date-range-picker {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-default);
+            border-radius: 8px;
+            font-size: 14px;
+            color: var(--text-primary);
+            cursor: pointer;
+        }
+        
+        .date-range-picker:hover {
+            background: var(--bg-hover);
+        }
+        
+        /* Pagination */
+        .pagination {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px;
+            border-top: 1px solid var(--border-subtle);
+            background: var(--bg-tertiary);
+        }
+        
+        .pagination-info {
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+        
+        .pagination-controls {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .pagination-btn {
+            padding: 6px 12px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-default);
+            border-radius: 6px;
+            font-size: 13px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+        
+        .pagination-btn:hover:not(:disabled) {
+            background: var(--bg-hover);
+        }
+        
+        .pagination-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        @media (max-width: 1200px) {
+            .stats-grid { grid-template-columns: repeat(3, 1fr); }
+        }
+        
+        @media (max-width: 768px) {
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+            .table-search { width: 100%; }
+        }
+    </style>
+</head>
+<body class="modern-light">
+    <!-- Top Navigation -->
+    <nav class="top-nav">
+        <div class="nav-logo">
+            <div class="nav-logo-icon">CP</div>
+            <span style="font-weight: 600; font-size: 16px;">Clear Piggy</span>
+        </div>
+        
+        <div class="nav-tabs">
+            <div class="nav-tab">Home</div>
+            <div class="nav-tab active">Transactions</div>
+            <div class="nav-tab">Invoices</div>
+            <div class="nav-tab">Bills</div>
+            <div class="nav-tab">Reports</div>
+            <div class="nav-tab">Tax Center</div>
+        </div>
+        
+        <div class="nav-actions">
+            <button class="btn btn-ghost" onclick="toggleTheme()">
+                <span id="theme-icon">🌙</span>
+            </button>
+            <button class="btn btn-primary">
+                + New Transaction
+            </button>
+            <div class="avatar" style="width: 32px; height: 32px; border-radius: 50%; background: var(--gradient-accent); display: flex; align-items: center; justify-content: center; color: white; font-size: 12px; font-weight: 600;">
+                JD
+            </div>
+        </div>
+    </nav>
+    
+    <!-- Main Content -->
+    <div class="page-container">
+        <!-- Page Header -->
+        <div class="page-header">
+            <div class="page-title-row">
+                <div>
+                    <h1 class="page-title">Transactions</h1>
+                    <p class="page-subtitle">Track and categorize all your business transactions</p>
+                </div>
+                <div style="display: flex; gap: 12px;">
+                    <div class="date-range-picker">
+                        <span>📅</span>
+                        <span>Oct 1 - Oct 31, 2024</span>
+                        <span>▼</span>
+                    </div>
+                    <button class="btn btn-secondary">
+                        ⬇ Export
+                    </button>
+                    <button class="btn btn-secondary">
+                        🔄 Sync
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Stats Cards -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-label">Total Inflow</div>
+                <div class="stat-value" style="color: var(--success-muted);">$48,592</div>
+                <div class="stat-change">↑ 12.3% from last month</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Total Outflow</div>
+                <div class="stat-value">$31,847</div>
+                <div class="stat-change">↓ 5.2% from last month</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Net Income</div>
+                <div class="stat-value" style="color: var(--success-muted);">$16,745</div>
+                <div class="stat-change">Profit margin: 34.5%</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Pending</div>
+                <div class="stat-value">12</div>
+                <div class="stat-change">$3,492 total</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Categorized</div>
+                <div class="stat-value">94%</div>
+                <div class="stat-change">8 uncategorized</div>
+            </div>
+        </div>
+        
+        <!-- Filter Bar -->
+        <div class="filter-bar">
+            <div class="filter-chip active">All Transactions</div>
+            <div class="filter-chip">Income</div>
+            <div class="filter-chip">Expenses</div>
+            <div class="filter-chip">Pending</div>
+            <div class="filter-chip">Uncategorized</div>
+            <div style="flex: 1;"></div>
+            <select style="padding: 6px 12px; background: var(--bg-tertiary); border: 1px solid var(--border-default); border-radius: 8px; font-size: 13px; color: var(--text-secondary);">
+                <option>All Accounts</option>
+                <option>Chase Checking ****4892</option>
+                <option>Chase Savings ****2341</option>
+                <option>Amex Business ****1005</option>
+            </select>
+        </div>
+        
+        <!-- Transaction Table -->
+        <div class="transaction-table">
+            <div class="table-toolbar">
+                <div class="table-search">
+                    <span class="search-icon">🔍</span>
+                    <input type="text" placeholder="Search transactions...">
+                </div>
+                <div class="table-actions">
+                    <button class="btn btn-ghost">⚡ Rules</button>
+                    <button class="btn btn-ghost">🏷️ Bulk Edit</button>
+                    <button class="btn btn-ghost">⋮</button>
+                </div>
+            </div>
+            
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 40px;">
+                            <input type="checkbox" class="transaction-checkbox">
+                        </th>
+                        <th>Date</th>
+                        <th>Transaction</th>
+                        <th>Category</th>
+                        <th>Account</th>
+                        <th style="text-align: right;">Amount</th>
+                        <th>Status</th>
+                        <th style="width: 40px;"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><input type="checkbox" class="transaction-checkbox"></td>
+                        <td>
+                            <div class="transaction-date">Oct 31, 2024</div>
+                            <div style="font-size: 11px; color: var(--text-muted);">3:42 PM</div>
+                        </td>
+                        <td>
+                            <div class="transaction-merchant">
+                                <div class="merchant-icon">🏢</div>
+                                <div>
+                                    <div class="transaction-description">Acme Corp</div>
+                                    <div style="font-size: 12px; color: var(--text-muted);">Invoice #1247 - Monthly retainer</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td><span class="transaction-category">Client Payment</span></td>
+                        <td style="color: var(--text-muted); font-size: 13px;">Chase Checking</td>
+                        <td style="text-align: right;"><span class="amount credit">+$12,500.00</span></td>
+                        <td><span class="transaction-status status-cleared">Cleared</span></td>
+                        <td><button class="btn btn-ghost" style="padding: 4px;">⋮</button></td>
+                    </tr>
+                    
+                    <tr>
+                        <td><input type="checkbox" class="transaction-checkbox"></td>
+                        <td>
+                            <div class="transaction-date">Oct 30, 2024</div>
+                            <div style="font-size: 11px; color: var(--text-muted);">11:23 AM</div>
+                        </td>
+                        <td>
+                            <div class="transaction-merchant">
+                                <div class="merchant-icon">💻</div>
+                                <div>
+                                    <div class="transaction-description">Adobe Creative Cloud</div>
+                                    <div style="font-size: 12px; color: var(--text-muted);">Subscription - Team license</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td><span class="transaction-category">Software</span></td>
+                        <td style="color: var(--text-muted); font-size: 13px;">Amex Business</td>
+                        <td style="text-align: right;"><span class="amount debit">-$599.88</span></td>
+                        <td><span class="transaction-status status-cleared">Cleared</span></td>
+                        <td><button class="btn btn-ghost" style="padding: 4px;">⋮</button></td>
+                    </tr>
+                    
+                    <tr>
+                        <td><input type="checkbox" class="transaction-checkbox"></td>
+                        <td>
+                            <div class="transaction-date">Oct 29, 2024</div>
+                            <div style="font-size: 11px; color: var(--text-muted);">2:15 PM</div>
+                        </td>
+                        <td>
+                            <div class="transaction-merchant">
+                                <div class="merchant-icon">☁️</div>
+                                <div>
+                                    <div class="transaction-description">AWS</div>
+                                    <div style="font-size: 12px; color: var(--text-muted);">Cloud services - October</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td><span class="transaction-category">Cloud Services</span></td>
+                        <td style="color: var(--text-muted); font-size: 13px;">Amex Business</td>
+                        <td style="text-align: right;"><span class="amount debit">-$2,341.67</span></td>
+                        <td><span class="transaction-status status-pending">Pending</span></td>
+                        <td><button class="btn btn-ghost" style="padding: 4px;">⋮</button></td>
+                    </tr>
+                    
+                    <tr>
+                        <td><input type="checkbox" class="transaction-checkbox"></td>
+                        <td>
+                            <div class="transaction-date">Oct 28, 2024</div>
+                            <div style="font-size: 11px; color: var(--text-muted);">9:45 AM</div>
+                        </td>
+                        <td>
+                            <div class="transaction-merchant">
+                                <div class="merchant-icon">💰</div>
+                                <div>
+                                    <div class="transaction-description">Stripe Payout</div>
+                                    <div style="font-size: 12px; color: var(--text-muted);">Payment processing - Weekly</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td><span class="transaction-category">Merchant Services</span></td>
+                        <td style="color: var(--text-muted); font-size: 13px;">Chase Checking</td>
+                        <td style="text-align: right;"><span class="amount credit">+$8,923.45</span></td>
+                        <td><span class="transaction-status status-cleared">Cleared</span></td>
+                        <td><button class="btn btn-ghost" style="padding: 4px;">⋮</button></td>
+                    </tr>
+                    
+                    <tr>
+                        <td><input type="checkbox" class="transaction-checkbox"></td>
+                        <td>
+                            <div class="transaction-date">Oct 27, 2024</div>
+                            <div style="font-size: 11px; color: var(--text-muted);">4:30 PM</div>
+                        </td>
+                        <td>
+                            <div class="transaction-merchant">
+                                <div class="merchant-icon">📱</div>
+                                <div>
+                                    <div class="transaction-description">Verizon Wireless</div>
+                                    <div style="font-size: 12px; color: var(--text-muted);">Business phone lines</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td><span class="transaction-category">Utilities</span></td>
+                        <td style="color: var(--text-muted); font-size: 13px;">Chase Checking</td>
+                        <td style="text-align: right;"><span class="amount debit">-$342.18</span></td>
+                        <td><span class="transaction-status status-cleared">Cleared</span></td>
+                        <td><button class="btn btn-ghost" style="padding: 4px;">⋮</button></td>
+                    </tr>
+                    
+                    <tr>
+                        <td><input type="checkbox" class="transaction-checkbox"></td>
+                        <td>
+                            <div class="transaction-date">Oct 26, 2024</div>
+                            <div style="font-size: 11px; color: var(--text-muted);">1:20 PM</div>
+                        </td>
+                        <td>
+                            <div class="transaction-merchant">
+                                <div class="merchant-icon">✈️</div>
+                                <div>
+                                    <div class="transaction-description">United Airlines</div>
+                                    <div style="font-size: 12px; color: var(--text-muted);">Flight to SF - Client meeting</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td><span class="transaction-category">Travel</span></td>
+                        <td style="color: var(--text-muted); font-size: 13px;">Amex Business</td>
+                        <td style="text-align: right;"><span class="amount debit">-$892.40</span></td>
+                        <td><span class="transaction-status status-cleared">Cleared</span></td>
+                        <td><button class="btn btn-ghost" style="padding: 4px;">⋮</button></td>
+                    </tr>
+                    
+                    <tr>
+                        <td><input type="checkbox" class="transaction-checkbox"></td>
+                        <td>
+                            <div class="transaction-date">Oct 25, 2024</div>
+                            <div style="font-size: 11px; color: var(--text-muted);">10:00 AM</div>
+                        </td>
+                        <td>
+                            <div class="transaction-merchant">
+                                <div class="merchant-icon">👥</div>
+                                <div>
+                                    <div class="transaction-description">Payroll - October</div>
+                                    <div style="font-size: 12px; color: var(--text-muted);">Team salaries & benefits</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td><span class="transaction-category">Payroll</span></td>
+                        <td style="color: var(--text-muted); font-size: 13px;">Chase Checking</td>
+                        <td style="text-align: right;"><span class="amount debit">-$24,500.00</span></td>
+                        <td><span class="transaction-status status-cleared">Cleared</span></td>
+                        <td><button class="btn btn-ghost" style="padding: 4px;">⋮</button></td>
+                    </tr>
+                    
+                    <tr>
+                        <td><input type="checkbox" class="transaction-checkbox"></td>
+                        <td>
+                            <div class="transaction-date">Oct 24, 2024</div>
+                            <div style="font-size: 11px; color: var(--text-muted);">3:15 PM</div>
+                        </td>
+                        <td>
+                            <div class="transaction-merchant">
+                                <div class="merchant-icon">🏪</div>
+                                <div>
+                                    <div class="transaction-description">Office Depot</div>
+                                    <div style="font-size: 12px; color: var(--text-muted);">Office supplies</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td><span class="transaction-category">Office Supplies</span></td>
+                        <td style="color: var(--text-muted); font-size: 13px;">Amex Business</td>
+                        <td style="text-align: right;"><span class="amount debit">-$234.67</span></td>
+                        <td><span class="transaction-status status-cleared">Cleared</span></td>
+                        <td><button class="btn btn-ghost" style="padding: 4px;">⋮</button></td>
+                    </tr>
+                </tbody>
+            </table>
+            
+            <!-- Pagination -->
+            <div class="pagination">
+                <div class="pagination-info">
+                    Showing 1-8 of 247 transactions
+                </div>
+                <div class="pagination-controls">
+                    <button class="pagination-btn" disabled>Previous</button>
+                    <button class="pagination-btn">1</button>
+                    <button class="pagination-btn">2</button>
+                    <button class="pagination-btn">3</button>
+                    <button class="pagination-btn">...</button>
+                    <button class="pagination-btn">31</button>
+                    <button class="pagination-btn">Next</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Bulk Actions Bar (hidden by default) -->
+    <div class="bulk-actions" id="bulkActions">
+        <span style="font-weight: 500;">3 transactions selected</span>
+        <button class="btn btn-ghost" style="color: white;">Categorize</button>
+        <button class="btn btn-ghost" style="color: white;">Add Tags</button>
+        <button class="btn btn-ghost" style="color: white;">Export</button>
+        <button class="btn btn-ghost" style="color: white;">Delete</button>
+    </div>
+    
+    <!-- Quick Actions FAB -->
+    <div class="quick-actions">
+        <button class="fab-main">+</button>
+    </div>
+    
+    <script>
+        function toggleTheme() {
+            const body = document.body;
+            const icon = document.getElementById('theme-icon');
+            
+            if (body.classList.contains('modern-light')) {
+                body.classList.remove('modern-light');
+                body.classList.add('modern-dark');
+                icon.textContent = '☀️';
+            } else {
+                body.classList.remove('modern-dark');
+                body.classList.add('modern-light');
+                icon.textContent = '🌙';
+            }
+        }
+        
+        // Simulate checkbox selection for bulk actions
+        const checkboxes = document.querySelectorAll('.transaction-checkbox');
+        let selectedCount = 0;
+        
+        checkboxes.forEach(cb => {
+            cb.addEventListener('change', (e) => {
+                selectedCount += e.target.checked ? 1 : -1;
+                const bulkActions = document.getElementById('bulkActions');
+                if (selectedCount > 0) {
+                    bulkActions.classList.add('show');
+                    bulkActions.querySelector('span').textContent = `${selectedCount} transaction${selectedCount > 1 ? 's' : ''} selected`;
+                } else {
+                    bulkActions.classList.remove('show');
+                }
+            });
+        });
+    </script>
+</body>
+</html>

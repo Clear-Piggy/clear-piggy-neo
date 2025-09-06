@@ -1,0 +1,511 @@
+{
+  "name": "OCR_Test_Secure",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "receipt-ocr-supabase",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [-3136, 256],
+      "id": "ace5908e-439b-4f11-939d-7552866b29b4",
+      "name": "Receipt Upload",
+      "webhookId": "1859ba85-1197-4e0c-b4be-3ed865a6cdf7"
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first();\nconst webhookData = item.json;\n\n// CRITICAL: Validate required workspace data\nconst userId = webhookData.body?.supabase_user_id || webhookData.supabase_user_id;\nconst workspaceId = webhookData.body?.workspace_id || webhookData.workspace_id;\nconst source = webhookData.body?.source || webhookData.source;\nconst userEmail = webhookData.body?.user_email || webhookData.user_email;\n\nconsole.log('🔒 Security validation:');\nconsole.log('- User ID:', userId);\nconsole.log('- Workspace ID:', workspaceId);\nconsole.log('- Source:', source);\nconsole.log('- Email:', userEmail);\n\n// SECURITY: Reject if missing critical data\nif (!userId || !workspaceId) {\n  throw new Error('SECURITY VIOLATION: Missing user_id or workspace_id in webhook payload');\n}\n\n// Validate UUID format\nconst uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;\nif (!uuidRegex.test(userId) || !uuidRegex.test(workspaceId)) {\n  throw new Error('SECURITY VIOLATION: Invalid UUID format for user_id or workspace_id');\n}\n\n// Check file upload exists\nif (!item.binary || !item.binary.file) {\n  throw new Error('No file found in upload');\n}\n\nconst fileData = item.binary.file;\nconst fileName = fileData.fileName || 'receipt';\nconst mimeType = fileData.mimeType || '';\nconst fileExt = fileName.split('.').pop().toLowerCase();\n\nconsole.log(`📄 File uploaded: ${fileName} (${mimeType})`);\n\n// Define file categories\nconst imageFormats = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'];\nconst needsConversion = ['pdf', 'doc', 'docx', 'tiff', 'tif', 'heic', 'heif'];\nconst unsupportedFormats = ['txt', 'csv', 'xlsx', 'mp4', 'avi', 'zip'];\n\n// Determine file type and action needed\nlet fileCategory = 'unknown';\nlet actionRequired = 'unknown';\n\nif (imageFormats.includes(fileExt) || mimeType.startsWith('image/')) {\n  fileCategory = 'image';\n  actionRequired = 'direct_ocr';\n} else if (needsConversion.includes(fileExt) || mimeType === 'application/pdf') {\n  fileCategory = 'document';\n  actionRequired = 'convert_then_ocr';\n} else if (unsupportedFormats.includes(fileExt)) {\n  throw new Error(`❌ Unsupported file type: ${fileExt}. Please upload images (JPG, PNG) or documents (PDF).`);\n} else {\n  fileCategory = 'unknown';\n  actionRequired = 'convert_then_ocr';\n}\n\nconsole.log(`🔍 File type: ${fileCategory}, Action: ${actionRequired}`);\n\nreturn {\n  json: {\n    fileName,\n    fileExtension: fileExt,\n    mimeType,\n    fileCategory,\n    actionRequired,\n    originalFile: true,\n    // SECURITY: Pass through validated workspace data\n    supabase_user_id: userId,\n    workspace_id: workspaceId,\n    upload_source: source,\n    user_email: userEmail,\n    upload_timestamp: new Date().toISOString()\n  },\n  binary: {\n    file: fileData\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-2832, 256],
+      "id": "validate-workspace-security",
+      "name": "Validate Workspace Security"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://lrwvooucggciazmzxqlb.supabase.co/functions/v1/validate-workspace-access",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxyd3Zvb3VjZ2djaWF6bXp4cWxiIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NTc4NzkyMCwiZXhwIjoyMDcxMzYzOTIwfQ.nm8RcglZ_ZCHdaxQlg_kd_v54kmA0X38Wj1LJxCKro8"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"user_id\": \"{{ $json.supabase_user_id }}\",\n  \"workspace_id\": \"{{ $json.workspace_id }}\",\n  \"required_permission\": \"documents:create\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-2544, 256],
+      "id": "validate-workspace-access",
+      "name": "Validate Workspace Access"
+    },
+    {
+      "parameters": {
+        "jsCode": "const securityData = $('Validate Workspace Security').first().json;\nconst accessData = $('Validate Workspace Access').first().json;\n\nconsole.log('🛡️ Access validation result:', accessData);\n\n// SECURITY: Reject if user doesn't have workspace access\nif (!accessData.has_access || accessData.has_access !== true) {\n  throw new Error(`SECURITY VIOLATION: User ${securityData.supabase_user_id} does not have access to workspace ${securityData.workspace_id}`);\n}\n\nconsole.log('✅ Workspace access validated - proceeding with OCR');\nconsole.log('- User role:', accessData.user_role);\nconsole.log('- Workspace name:', accessData.workspace_name);\n\n// Continue with file processing logic\nconst actionRequired = securityData.actionRequired;\n\nreturn {\n  json: {\n    ...securityData,\n    workspace_validated: true,\n    user_role: accessData.user_role,\n    workspace_name: accessData.workspace_name\n  },\n  binary: securityData.binary || {}\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-2256, 256],
+      "id": "security-checkpoint",
+      "name": "Security Checkpoint"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "a9ea59e0-c6dc-476c-b6ad-3704bd087b33",
+              "leftValue": "={{ $json.actionRequired }}",
+              "rightValue": "convert_then_ocr",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [-1968, 256],
+      "id": "conversion-decision",
+      "name": "Needs Conversion?"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.freeconvert.com/v1/process/jobs",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer api_production_fd84e6ec159ae734754c1a7894f8b5c355bcc9ecd6229a164e14d3f7f301d020.68a76071134bd94e6f06395d.68a7613130575dc01539b1e8"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"tag\": \"receipt-ocr-{{ $json.workspace_id }}-{{ $now }}\",\n  \"tasks\": {\n    \"my-upload\": { \n      \"operation\": \"import/upload\" \n    },\n    \"convert-receipt\": {\n      \"operation\": \"convert\",\n      \"input\": \"my-upload\",\n      \"output_format\": \"jpg\",\n      \"options\": {\n        \"quality\": 90,\n        \"density\": 300\n      }\n    },\n    \"export-file\": {\n      \"operation\": \"export/url\",\n      \"input\": \"convert-receipt\",\n      \"filename\": \"receipt.jpg\"\n    }\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-1680, 128],
+      "id": "create-conversion-job",
+      "name": "Create Conversion Job"
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first();\n\nif (!item.binary || !item.binary.file) {\n  throw new Error('No file found');\n}\n\nconst fileData = item.binary.file;\nconst fileName = fileData.fileName || 'receipt.jpg';\nlet mimeType = fileData.mimeType || '';\n\n// Ensure proper image MIME type\nconst fileExt = fileName.split('.').pop().toLowerCase();\nif (!mimeType.startsWith('image/')) {\n  if (fileExt === 'jpg' || fileExt === 'jpeg') {\n    mimeType = 'image/jpeg';\n  } else if (fileExt === 'png') {\n    mimeType = 'image/png';\n  } else {\n    mimeType = 'image/jpeg';\n  }\n}\n\nconsole.log(`✅ Image ready for direct OCR: ${fileName} (${mimeType})`);\n\n// Pass through all security data\nconst securityData = item.json;\n\nreturn {\n  json: {\n    ...securityData,\n    fileName,\n    fileExtension: fileExt,\n    mimeType,\n    isValidImage: true,\n    processingId: `direct_${Date.now()}`,\n    wasConverted: false\n  },\n  binary: {\n    data: {\n      data: fileData.data,\n      mimeType: mimeType,\n      fileName: fileName\n    }\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-1680, 384],
+      "id": "prepare-direct-ocr",
+      "name": "Prepare Direct OCR"
+    },
+    {
+      "parameters": {
+        "resource": "image",
+        "operation": "analyze",
+        "modelId": {
+          "__rl": true,
+          "value": "chatgpt-4o-latest",
+          "mode": "list",
+          "cachedResultName": "CHATGPT-4O-LATEST"
+        },
+        "text": "Analyze this receipt image and extract all visible transaction information.\n\nReturn ONLY a valid JSON object with this exact structure:\n\n{\n  \"merchant_name\": \"Store Name\",\n  \"location\": \"City or Address\", \n  \"total_amount\": 25.50,\n  \"currency\": \"USD\",\n  \"transaction_date\": \"2025-01-15\",\n  \"transaction_time\": \"14:30\",\n  \"line_items\": [\n    {\n      \"description\": \"Item name\",\n      \"quantity\": 1,\n      \"unit_price\": 5.99,\n      \"total\": 5.99\n    }\n  ],\n  \"tax_amount\": 2.25,\n  \"tip_amount\": 0.00,\n  \"payment_method\": \"card\",\n  \"receipt_number\": \"12345\",\n  \"confidence_score\": 0.95,\n  \"extraction_notes\": \"Clear receipt, all information visible\"\n}\n\nIMPORTANT RULES:\n- Extract only what you can clearly see in the image\n- Use numbers (not strings) for all amounts\n- Set confidence_score between 0.0 and 1.0 based on image clarity\n- Leave fields empty (\"\") if not visible or unclear\n- Use ISO date format (YYYY-MM-DD) for transaction_date\n- Use 24-hour time format (HH:MM) for transaction_time\n- Return ONLY the JSON object, no other text or formatting\n- Do not add markdown code blocks or any other text",
+        "inputType": "base64",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [416, 128],
+      "id": "analyze-receipt-image",
+      "name": "Analyze Receipt Image",
+      "credentials": {
+        "openAiApi": {
+          "id": "JoowklyzIoVZNwyM",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse OpenAI image analysis response\nconst items = $input.all();\n\nreturn items.map(item => {\n  // Get security data from previous nodes\n  const securityData = item.json;\n  \n  // OpenAI image analysis returns data in different fields\n  let rawResponse = '';\n  \n  // Try different possible response fields from OpenAI node\n  if (item.json.choices && item.json.choices[0] && item.json.choices[0].message) {\n    rawResponse = item.json.choices[0].message.content;\n  } else if (item.json.content) {\n    rawResponse = item.json.content;\n  } else if (item.json.response) {\n    rawResponse = item.json.response;\n  } else if (item.json.text) {\n    rawResponse = item.json.text;\n  } else if (item.json.output) {\n    rawResponse = item.json.output;\n  } else {\n    console.log('Available response keys:', Object.keys(item.json));\n    console.log('Full response:', JSON.stringify(item.json).substring(0, 500));\n    throw new Error('No response found. Check debug logs above.');\n  }\n  \n  if (!rawResponse) {\n    throw new Error('Empty response from OpenAI');\n  }\n  \n  console.log('Raw response (first 200 chars):', rawResponse.substring(0, 200));\n  \n  // Clean the response - remove code blocks if present\n  let cleanResponse = rawResponse\n    .replace(/^```json\\s*/i, '')\n    .replace(/^```\\s*/i, '')\n    .replace(/\\s*```$/g, '')\n    .trim();\n  \n  let parsed;\n  try {\n    parsed = JSON.parse(cleanResponse);\n  } catch (error) {\n    console.error('Failed to parse JSON. Raw response:', cleanResponse.substring(0, 500));\n    throw new Error(`JSON parse failed: ${error.message}`);\n  }\n  \n  // Validate and normalize the extracted data\n  const result = {\n    // SECURITY: Include workspace data in result\n    workspace_id: securityData.workspace_id,\n    supabase_user_id: securityData.supabase_user_id,\n    user_role: securityData.user_role,\n    workspace_name: securityData.workspace_name,\n    \n    // OCR Results\n    success: true,\n    merchant_name: parsed.merchant_name || '',\n    location: parsed.location || '',\n    total_amount: parseFloat(parsed.total_amount) || 0,\n    currency: parsed.currency || 'USD',\n    transaction_date: parsed.transaction_date || '',\n    transaction_time: parsed.transaction_time || '',\n    line_items: Array.isArray(parsed.line_items) ? parsed.line_items : [],\n    tax_amount: parseFloat(parsed.tax_amount) || 0,\n    tip_amount: parseFloat(parsed.tip_amount) || 0,\n    payment_method: parsed.payment_method || '',\n    receipt_number: parsed.receipt_number || '',\n    confidence_score: parseFloat(parsed.confidence_score) || 0,\n    extraction_notes: parsed.extraction_notes || '',\n    processed_at: new Date().toISOString(),\n    \n    // Debug info\n    _debug: {\n      originalResponseKeys: Object.keys(item.json),\n      rawResponseLength: rawResponse.length,\n      workspaceValidated: true\n    }\n  };\n  \n  console.log(`✅ Extracted: ${result.merchant_name} - $${result.total_amount} (confidence: ${result.confidence_score})`);\n  console.log(`🏢 Workspace: ${result.workspace_name} (${result.workspace_id})`);\n  \n  return { json: result };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [672, 128],
+      "id": "parse-ocr-response",
+      "name": "Parse OCR Response"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://lrwvooucggciazmzxqlb.supabase.co/storage/v1/object/receipts/{{ $json.workspace_id }}/{{ $json.supabase_user_id }}/{{ $now.toFormat('yyyy-MM-dd_HH-mm-ss') }}_receipt.jpg",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxyd3Zvb3VjZ2djaWF6bXp4cWxiIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NTc4NzkyMCwiZXhwIjoyMDcxMzYzOTIwfQ.nm8RcglZ_ZCHdaxQlg_kd_v54kmA0X38Wj1LJxCKro8"
+            },
+            {
+              "name": "Content-Type",
+              "value": "{{ $binary.data.mimeType }}"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=representation"
+            },
+            {
+              "name": "apikey",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxyd3Zvb3VjZ2djaWF6bXp4cWxiIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NTc4NzkyMCwiZXhwIjoyMDcxMzYzOTIwfQ.nm8RcglZ_ZCHdaxQlg_kd_v54kmA0X38Wj1LJxCKro8"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "binaryData",
+        "inputDataFieldName": "data",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [432, 352],
+      "id": "upload-receipt-storage",
+      "name": "Upload Receipt Storage"
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first();\nconst storageResponse = item.json;\nconst securityData = item.json; // Security data should be passed through\n\nconsole.log('📁 Storage response for workspace:', securityData.workspace_id);\n\n// Check if storage was successful\nif (!storageResponse || (!storageResponse.Key && !storageResponse.name)) {\n  console.warn('Storage upload may have failed - no Key or name found');\n  return {\n    json: {\n      ...securityData,\n      storage_success: false,\n      storage_url: null,\n      storage_key: null,\n      error: 'No storage key returned'\n    }\n  };\n}\n\n// Extract the storage key/path - Supabase Storage API returns different formats\nconst storageKey = storageResponse.Key || storageResponse.name || storageResponse.path;\n\n// Build the workspace-scoped public URL\nconst publicUrl = storageKey ? \n  `https://lrwvooucggciazmzxqlb.supabase.co/storage/v1/object/public/${storageKey}` : \n  null;\n\nconsole.log('📁 Storage key:', storageKey);\nconsole.log('🔗 Public URL:', publicUrl);\n\nreturn {\n  json: {\n    ...securityData,\n    storage_success: true,\n    storage_url: publicUrl,\n    storage_key: storageKey,\n    original_response: storageResponse\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [688, 352],
+      "id": "process-storage-result",
+      "name": "Process Storage Result"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [992, 144],
+      "id": "merge-ocr-storage",
+      "name": "Merge OCR & Storage"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\n\n// Find OCR data and storage data from the merged inputs\nlet ocrData = null;\nlet storageData = null;\n\nitems.forEach(item => {\n  if (item.json.merchant_name !== undefined) {\n    ocrData = item.json;\n  }\n  if (item.json.storage_success !== undefined) {\n    storageData = item.json;\n  }\n});\n\nif (!ocrData) {\n  throw new Error('No OCR data found in merged inputs');\n}\n\n// SECURITY: Validate workspace consistency\nif (ocrData.workspace_id !== storageData?.workspace_id) {\n  throw new Error('SECURITY VIOLATION: Workspace ID mismatch between OCR and storage data');\n}\n\nconsole.log('🔄 Processing merged data for workspace:', ocrData.workspace_id);\nconsole.log('- Merchant:', ocrData.merchant_name);\nconsole.log('- Amount:', ocrData.total_amount);\nconsole.log('- Storage success:', storageData?.storage_success);\n\n// Combine both data sets with workspace validation\nreturn {\n  json: {\n    ...ocrData,\n    ...storageData,\n    workspace_validated: true,\n    ready_for_transaction_creation: true\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1264, 144],
+      "id": "prepare-transaction-data",
+      "name": "Prepare Transaction Data"
+    },
+    {
+      "parameters": {
+        "jsCode": "const combinedData = $input.first().json;\n\n// SECURITY: Double-check workspace_id exists\nif (!combinedData.workspace_id) {\n  throw new Error('SECURITY VIOLATION: No workspace_id in transaction preparation');\n}\n\nconsole.log('💰 Preparing transaction for workspace:', combinedData.workspace_id);\nconsole.log('- User:', combinedData.supabase_user_id);\nconsole.log('- Merchant:', combinedData.merchant_name);\nconsole.log('- Amount:', combinedData.total_amount);\n\n// Smart categorization based on merchant name\nfunction determineCategory(merchantName) {\n  if (!merchantName) return 'Other Expenses';\n  \n  const merchant = merchantName.toLowerCase();\n  \n  // Food & Dining\n  if (merchant.includes('whole foods') || merchant.includes('trader joe') || \n      merchant.includes('safeway') || merchant.includes('kroger') || \n      merchant.includes('walmart') || merchant.includes('target') ||\n      merchant.includes('grocery') || merchant.includes('market')) {\n    return 'Groceries';\n  }\n  \n  if (merchant.includes('starbucks') || merchant.includes('dunkin') || \n      merchant.includes('coffee') || merchant.includes('cafe') || \n      merchant.includes('tea')) {\n    return 'Coffee Shops';\n  }\n  \n  if (merchant.includes('restaurant') || merchant.includes('grill') || \n      merchant.includes('kitchen') || merchant.includes('bistro') || \n      merchant.includes('pizza') || merchant.includes('sushi') ||\n      merchant.includes('bar') || merchant.includes('diner')) {\n    return 'Restaurants';\n  }\n  \n  // Transportation\n  if (merchant.includes('shell') || merchant.includes('chevron') || \n      merchant.includes('exxon') || merchant.includes('mobil') || \n      merchant.includes('gas') || merchant.includes('fuel')) {\n    return 'Gas & Fuel';\n  }\n  \n  if (merchant.includes('uber') || merchant.includes('lyft') || \n      merchant.includes('taxi') || merchant.includes('transit')) {\n    return 'Transportation';\n  }\n  \n  // Shopping\n  if (merchant.includes('amazon') || merchant.includes('ebay') || \n      merchant.includes('etsy')) {\n    return 'Online Shopping';\n  }\n  \n  if (merchant.includes('mall') || merchant.includes('store') || \n      merchant.includes('shop') || merchant.includes('boutique')) {\n    return 'Shopping';\n  }\n  \n  // Services\n  if (merchant.includes('netflix') || merchant.includes('spotify') || \n      merchant.includes('hulu') || merchant.includes('disney')) {\n    return 'Subscriptions';\n  }\n  \n  if (merchant.includes('verizon') || merchant.includes('at&t') || \n      merchant.includes('t-mobile') || merchant.includes('comcast')) {\n    return 'Phone & Internet';\n  }\n  \n  return 'Other Expenses';\n}\n\n// Format for Supabase transaction - WORKSPACE SCOPED\nconst transactionData = {\n  workspace_id: combinedData.workspace_id, // CRITICAL: Workspace scoped\n  merchant: combinedData.merchant_name || 'Unknown Merchant',\n  amount: -Math.abs(combinedData.total_amount || 0), // Negative for expenses\n  description: `Receipt: ${combinedData.merchant_name || 'Unknown'}`,\n  category_name: determineCategory(combinedData.merchant_name),\n  transaction_type: 'expense',\n  status: 'completed',\n  transaction_date: combinedData.transaction_date || new Date().toISOString().split('T')[0],\n  currency: combinedData.currency || 'USD',\n  receipt_url: combinedData.storage_url || null,\n  notes: [\n    combinedData.extraction_notes ? `OCR Notes: ${combinedData.extraction_notes}` : '',\n    combinedData.line_items && combinedData.line_items.length > 0 ? `Items: ${JSON.stringify(combinedData.line_items)}` : '',\n    combinedData.confidence_score ? `Confidence: ${(combinedData.confidence_score * 100).toFixed(1)}%` : '',\n    combinedData.receipt_number ? `Receipt #: ${combinedData.receipt_number}` : '',\n    combinedData.payment_method ? `Payment: ${combinedData.payment_method}` : '',\n    combinedData.tax_amount ? `Tax: $${combinedData.tax_amount}` : '',\n    combinedData.tip_amount ? `Tip: $${combinedData.tip_amount}` : '',\n    combinedData.storage_success ? `Receipt stored: ${combinedData.storage_key}` : 'Receipt storage failed',\n    `Processed by: ${combinedData.user_role} in ${combinedData.workspace_name}`\n  ].filter(Boolean).join('\\n'),\n  tags: combinedData.confidence_score < 0.7 ? ['receipt', 'processed', 'low-confidence', 'needs-review'] : ['receipt', 'processed'],\n  created_by: combinedData.supabase_user_id,\n  updated_by: combinedData.supabase_user_id\n};\n\nconsole.log('📊 Transaction data (workspace-scoped):');\nconsole.log('- Workspace ID:', transactionData.workspace_id);\nconsole.log('- Amount:', transactionData.amount);\nconsole.log('- Category:', transactionData.category_name);\n\nreturn { json: transactionData };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1520, 144],
+      "id": "format-supabase-transaction",
+      "name": "Format Supabase Transaction"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://lrwvooucggciazmzxqlb.supabase.co/rest/v1/transactions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxyd3Zvb3VjZ2djaWF6bXp4cWxiIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NTc4NzkyMCwiZXhwIjoyMDcxMzYzOTIwfQ.nm8RcglZ_ZCHdaxQlg_kd_v54kmA0X38Wj1LJxCKro8"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=representation"
+            },
+            {
+              "name": "apikey",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxyd3Zvb3VjZ2djaWF6bXp4cWxiIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NTc4NzkyMCwiZXhwIjoyMDcxMzYzOTIwfQ.nm8RcglZ_ZCHdaxQlg_kd_v54kmA0X38Wj1LJxCKro8"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1776, 144],
+      "id": "create-workspace-transaction",
+      "name": "Create Workspace Transaction"
+    },
+    {
+      "parameters": {
+        "jsCode": "const transactionResult = $input.first().json;\n\nconsole.log('✅ Transaction created successfully!');\nconsole.log('- Transaction ID:', transactionResult.id);\nconsole.log('- Workspace ID:', transactionResult.workspace_id);\nconsole.log('- Amount:', transactionResult.amount);\nconsole.log('- Merchant:', transactionResult.merchant);\n\n// Return final result with security validation confirmation\nreturn {\n  json: {\n    success: true,\n    transaction_id: transactionResult.id,\n    workspace_id: transactionResult.workspace_id,\n    merchant: transactionResult.merchant,\n    amount: transactionResult.amount,\n    category: transactionResult.category_name,\n    receipt_url: transactionResult.receipt_url,\n    processing_time: new Date().toISOString(),\n    security_validated: true,\n    message: `Receipt processed successfully for workspace ${transactionResult.workspace_id}`\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2032, 144],
+      "id": "final-success-response",
+      "name": "Final Success Response"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [2288, 144],
+      "id": "return-secure-result",
+      "name": "Return Secure Result"
+    }
+  ],
+  "connections": {
+    "Receipt Upload": {
+      "main": [
+        [
+          {
+            "node": "Validate Workspace Security",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Workspace Security": {
+      "main": [
+        [
+          {
+            "node": "Validate Workspace Access",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Workspace Access": {
+      "main": [
+        [
+          {
+            "node": "Security Checkpoint",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Security Checkpoint": {
+      "main": [
+        [
+          {
+            "node": "Needs Conversion?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Needs Conversion?": {
+      "main": [
+        [
+          {
+            "node": "Create Conversion Job",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prepare Direct OCR",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Conversion Job": {
+      "main": [
+        [
+          {
+            "node": "Analyze Receipt Image",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Upload Receipt Storage",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Direct OCR": {
+      "main": [
+        [
+          {
+            "node": "Analyze Receipt Image",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Upload Receipt Storage",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analyze Receipt Image": {
+      "main": [
+        [
+          {
+            "node": "Parse OCR Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse OCR Response": {
+      "main": [
+        [
+          {
+            "node": "Merge OCR & Storage",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload Receipt Storage": {
+      "main": [
+        [
+          {
+            "node": "Process Storage Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Storage Result": {
+      "main": [
+        [
+          {
+            "node": "Merge OCR & Storage",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge OCR & Storage": {
+      "main": [
+        [
+          {
+            "node": "Prepare Transaction Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Transaction Data": {
+      "main": [
+        [
+          {
+            "node": "Format Supabase Transaction",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Supabase Transaction": {
+      "main": [
+        [
+          {
+            "node": "Create Workspace Transaction",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Workspace Transaction": {
+      "main": [
+        [
+          {
+            "node": "Final Success Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Final Success Response": {
+      "main": [
+        [
+          {
+            "node": "Return Secure Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "instanceId": "workspace-security-enhanced"
+  },
+  "id": "secure-ocr-workflow",
+  "tags": ["security", "workspace-scoped", "receipt-processing"]
+}

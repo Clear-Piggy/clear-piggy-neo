@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Run Migration</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <h1>Running Database Migration</h1>
+    <div id="status"></div>
+    <pre id="results"></pre>
+
+    <script>
+        const { createClient } = supabase;
+        const supabaseUrl = 'https://rnevebffhtplbixdmbgq.supabase.co';
+        const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJuZXZlYmZmaHRwbGJpeGRtYmdxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzQ0MDg4MzMsImV4cCI6MjA1MDA4NDgzM30.8BK94YT19_fCjCKcRn0K4kHRrbMmomtsgnEiXBCfhKg';
+        const supabaseServiceKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJuZXZlYmZmaHRwbGJpeGRtYmdxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTczNDQwODgzMywiZXhwIjoyMDUwMDg0ODMzfQ.HKTrN23zfx_O-r7xOdYU0D-QWz3yOhMJnk1o-1zVkNs';
+        
+        // Use service role client for admin operations
+        const adminClient = createClient(supabaseUrl, supabaseServiceKey);
+        
+        async function runMigration() {
+            const status = document.getElementById('status');
+            const results = document.getElementById('results');
+            
+            status.textContent = 'Running migration...';
+            
+            try {
+                // Run each ALTER statement
+                console.log('Adding workspace_type column...');
+                const { error: error1 } = await adminClient.rpc('exec_sql', {
+                    sql: `ALTER TABLE public.workspaces 
+                          ADD COLUMN IF NOT EXISTS workspace_type text DEFAULT 'personal' 
+                          CHECK (workspace_type IN ('personal', 'business'))`
+                });
+                
+                if (error1) {
+                    // Try direct approach
+                    const { data: check1 } = await adminClient
+                        .from('workspaces')
+                        .select('workspace_type')
+                        .limit(1);
+                    
+                    if (check1 === null || !('workspace_type' in (check1[0] || {}))) {
+                        results.textContent += 'Note: workspace_type column may need manual addition\n';
+                    } else {
+                        results.textContent += '✓ workspace_type column exists\n';
+                    }
+                }
+                
+                console.log('Adding onboarding_completed column...');
+                const { error: error2 } = await adminClient.rpc('exec_sql', {
+                    sql: `ALTER TABLE public.workspaces 
+                          ADD COLUMN IF NOT EXISTS onboarding_completed boolean DEFAULT false`
+                });
+                
+                if (error2) {
+                    // Try direct approach
+                    const { data: check2 } = await adminClient
+                        .from('workspaces')
+                        .select('onboarding_completed')
+                        .limit(1);
+                    
+                    if (check2 === null || !('onboarding_completed' in (check2[0] || {}))) {
+                        results.textContent += 'Note: onboarding_completed column may need manual addition\n';
+                    } else {
+                        results.textContent += '✓ onboarding_completed column exists\n';
+                    }
+                }
+                
+                console.log('Updating existing workspaces...');
+                const { error: error3 } = await adminClient
+                    .from('workspaces')
+                    .update({ onboarding_completed: true })
+                    .is('onboarding_completed', null);
+                
+                if (!error3) {
+                    results.textContent += '✓ Updated existing workspaces\n';
+                }
+                
+                // Check if columns were added
+                const { data: testData, error: testError } = await adminClient
+                    .from('workspaces')
+                    .select('id, name, workspace_type, onboarding_completed')
+                    .limit(1);
+                
+                if (testData && testData.length > 0) {
+                    results.textContent += '\nTest query successful!\n';
+                    results.textContent += JSON.stringify(testData[0], null, 2);
+                    status.textContent = '✅ Migration completed successfully!';
+                } else {
+                    status.textContent = '⚠️ Migration may need to be run manually in Supabase dashboard';
+                    results.textContent += '\n\nPlease run this SQL in Supabase SQL editor:\n\n';
+                    results.textContent += `-- Add workspace type field to workspaces table
+ALTER TABLE public.workspaces 
+ADD COLUMN IF NOT EXISTS workspace_type text DEFAULT 'personal' 
+CHECK (workspace_type IN ('personal', 'business'));
+
+-- Add onboarding_completed field
+ALTER TABLE public.workspaces 
+ADD COLUMN IF NOT EXISTS onboarding_completed boolean DEFAULT false;
+
+-- Update existing workspaces to mark them as onboarded
+UPDATE public.workspaces 
+SET onboarding_completed = true 
+WHERE onboarding_completed IS NULL;`;
+                }
+                
+            } catch (error) {
+                console.error('Migration error:', error);
+                status.textContent = '❌ Migration failed - see console';
+                results.textContent = error.message;
+            }
+        }
+        
+        // Run migration on page load
+        runMigration();
+    </script>
+</body>
+</html>

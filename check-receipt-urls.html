@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Check Receipt URLs</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .receipt {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+        .url {
+            background: #f0f0f0;
+            padding: 10px;
+            border-radius: 4px;
+            word-break: break-all;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        img {
+            max-width: 200px;
+            max-height: 200px;
+            object-fit: contain;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .error {
+            color: red;
+        }
+        .success {
+            color: green;
+        }
+    </style>
+</head>
+<body>
+    <h1>Check Receipt Storage URLs</h1>
+    <button onclick="checkReceipts()">Check Receipt URLs</button>
+    <button onclick="testUpload()">Test Upload New Receipt</button>
+    <div id="status"></div>
+    <div id="receipts"></div>
+
+    <script>
+        const SUPABASE_URL = 'https://lrwvooucggciazmzxqlb.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxyd3ZvdWNnZ2NpYXptenp4cWxiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MjgwNjkyNzUsImV4cCI6MjA0MzY0NTI3NX0.tKwwPiaFLRql6M8UbfVPkr4e7dAOA_BQMpEQdPHCLe0';
+        
+        const { createClient } = supabase;
+        const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        async function checkReceipts() {
+            const statusDiv = document.getElementById('status');
+            const receiptsDiv = document.getElementById('receipts');
+            
+            statusDiv.innerHTML = 'Loading...';
+            receiptsDiv.innerHTML = '';
+
+            try {
+                // Get current user
+                const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
+                if (!user) {
+                    statusDiv.innerHTML = '<p class="error">Not authenticated. Please sign in.</p>';
+                    return;
+                }
+
+                // Get workspace
+                const { data: profile } = await supabaseClient
+                    .from('user_profiles')
+                    .select('current_workspace_id')
+                    .eq('auth_user_id', user.id)
+                    .single();
+
+                if (!profile?.current_workspace_id) {
+                    statusDiv.innerHTML = '<p class="error">No workspace found.</p>';
+                    return;
+                }
+
+                // Get documents
+                const { data: documents, error } = await supabaseClient
+                    .from('documents')
+                    .select('*')
+                    .eq('workspace_id', profile.current_workspace_id)
+                    .eq('document_type', 'receipt')
+                    .order('created_at', { ascending: false })
+                    .limit(5);
+
+                if (error) {
+                    throw error;
+                }
+
+                if (!documents || documents.length === 0) {
+                    statusDiv.innerHTML = '<p class="error">No receipts found.</p>';
+                    return;
+                }
+
+                statusDiv.innerHTML = `<p class="success">Found ${documents.length} receipt(s)</p>`;
+
+                let html = '';
+                for (const doc of documents) {
+                    // Build different possible URLs
+                    const baseUrl = 'https://lrwvooucggciazmzxqlb.supabase.co/storage/v1/object/public';
+                    
+                    const urls = {
+                        'With bucket and path': `${baseUrl}/${doc.storage_bucket}/${doc.storage_path}`,
+                        'Just bucket/path': `${baseUrl}/receipts/${doc.storage_path}`,
+                        'Direct path': `${baseUrl}/${doc.storage_path}`,
+                    };
+
+                    html += `
+                        <div class="receipt">
+                            <h3>${doc.filename}</h3>
+                            <p><strong>Storage Bucket:</strong> ${doc.storage_bucket || 'Not set'}</p>
+                            <p><strong>Storage Path:</strong> ${doc.storage_path || 'Not set'}</p>
+                            <p><strong>MIME Type:</strong> ${doc.mime_type}</p>
+                            <p><strong>Status:</strong> ${doc.processing_status}</p>
+                            
+                            <h4>Possible URLs:</h4>
+                    `;
+
+                    for (const [label, url] of Object.entries(urls)) {
+                        html += `
+                            <div style="margin: 10px 0;">
+                                <p><strong>${label}:</strong></p>
+                                <div class="url">${url}</div>
+                                <button onclick="testUrl('${url.replace(/'/g, "\\'")}')">Test This URL</button>
+                                <div id="test-${btoa(url).substring(0, 10)}"></div>
+                            </div>
+                        `;
+                    }
+
+                    // Also try to get the signed URL
+                    if (doc.storage_path) {
+                        const { data: signedUrlData, error: signedError } = await supabaseClient.storage
+                            .from('receipts')
+                            .createSignedUrl(doc.storage_path, 60);
+                        
+                        if (signedUrlData?.signedUrl) {
+                            html += `
+                                <div style="margin: 10px 0;">
+                                    <p><strong>Signed URL (1 min):</strong></p>
+                                    <div class="url">${signedUrlData.signedUrl}</div>
+                                    <button onclick="window.open('${signedUrlData.signedUrl}', '_blank')">Open Signed URL</button>
+                                </div>
+                            `;
+                        } else if (signedError) {
+                            html += `<p class="error">Signed URL Error: ${signedError.message}</p>`;
+                        }
+                    }
+
+                    html += `</div>`;
+                }
+
+                receiptsDiv.innerHTML = html;
+
+            } catch (error) {
+                console.error('Error:', error);
+                statusDiv.innerHTML = `<p class="error">Error: ${error.message}</p>`;
+            }
+        }
+
+        async function testUrl(url) {
+            const testId = 'test-' + btoa(url).substring(0, 10);
+            const testDiv = document.getElementById(testId);
+            
+            testDiv.innerHTML = 'Testing...';
+            
+            try {
+                const response = await fetch(url);
+                if (response.ok) {
+                    const contentType = response.headers.get('content-type');
+                    testDiv.innerHTML = `<span class="success">✓ Success! Content-Type: ${contentType}</span>`;
+                    
+                    // If it's an image, try to display it
+                    if (contentType && contentType.startsWith('image/')) {
+                        testDiv.innerHTML += `<br><img src="${url}" alt="Receipt preview" />`;
+                    }
+                } else {
+                    const text = await response.text();
+                    testDiv.innerHTML = `<span class="error">✗ Failed: ${response.status} - ${text}</span>`;
+                }
+            } catch (error) {
+                testDiv.innerHTML = `<span class="error">✗ Error: ${error.message}</span>`;
+            }
+        }
+
+        async function testUpload() {
+            const statusDiv = document.getElementById('status');
+            
+            try {
+                // Create a simple test image
+                const canvas = document.createElement('canvas');
+                canvas.width = 100;
+                canvas.height = 100;
+                const ctx = canvas.getContext('2d');
+                ctx.fillStyle = 'white';
+                ctx.fillRect(0, 0, 100, 100);
+                ctx.fillStyle = 'black';
+                ctx.font = '20px Arial';
+                ctx.fillText('TEST', 20, 50);
+                
+                canvas.toBlob(async (blob) => {
+                    const file = new File([blob], 'test-receipt.png', { type: 'image/png' });
+                    
+                    // Get current user
+                    const { data: { user } } = await supabaseClient.auth.getUser();
+                    if (!user) {
+                        statusDiv.innerHTML = '<p class="error">Not authenticated.</p>';
+                        return;
+                    }
+
+                    // Get workspace
+                    const { data: profile } = await supabaseClient
+                        .from('user_profiles')
+                        .select('current_workspace_id')
+                        .eq('auth_user_id', user.id)
+                        .single();
+
+                    const workspaceId = profile?.current_workspace_id;
+                    if (!workspaceId) {
+                        statusDiv.innerHTML = '<p class="error">No workspace.</p>';
+                        return;
+                    }
+
+                    // Test different upload paths
+                    const timestamp = Date.now();
+                    const paths = [
+                        `${workspaceId}/${timestamp}-test1.png`,
+                        `receipts/${workspaceId}/${timestamp}-test2.png`,
+                        `${timestamp}-test3.png`
+                    ];
+
+                    statusDiv.innerHTML = '<h3>Testing upload paths:</h3>';
+
+                    for (const path of paths) {
+                        const { data, error } = await supabaseClient.storage
+                            .from('receipts')
+                            .upload(path, file, {
+                                contentType: 'image/png',
+                                upsert: true
+                            });
+
+                        if (data) {
+                            statusDiv.innerHTML += `<p class="success">✓ Upload succeeded for path: ${path}</p>`;
+                            statusDiv.innerHTML += `<p>Returned path: ${data.path}</p>`;
+                            
+                            // Get public URL
+                            const { data: urlData } = supabaseClient.storage
+                                .from('receipts')
+                                .getPublicUrl(data.path);
+                            
+                            statusDiv.innerHTML += `<p>Public URL: <a href="${urlData.publicUrl}" target="_blank">${urlData.publicUrl}</a></p>`;
+                        } else {
+                            statusDiv.innerHTML += `<p class="error">✗ Upload failed for path: ${path} - ${error?.message}</p>`;
+                        }
+                    }
+                }, 'image/png');
+            } catch (error) {
+                statusDiv.innerHTML = `<p class="error">Error: ${error.message}</p>`;
+            }
+        }
+
+        // Auto-check on load
+        window.onload = () => {
+            checkReceipts();
+        };
+    </script>
+</body>
+</html>

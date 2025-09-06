@@ -1,0 +1,1423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Categories & Auto-Classification - Clear Piggy</title>
+    <link rel="stylesheet" href="modern-sophisticated-theme.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #f8faf9 0%, #f0fdf4 100%);
+            color: #1e2925;
+            min-height: 100vh;
+        }
+
+        /* Clear Piggy Brand Colors */
+        :root {
+            --primary-gradient: linear-gradient(135deg, #16a34a 0%, #22c55e 100%);
+            --primary-green: #22c55e;
+            --primary-dark: #16a34a;
+            --primary-light: #4ade80;
+            --primary-subtle: #dcfce7;
+            
+            --orange-accent: #f97316;
+            --orange-light: #fed7aa;
+            --blue-accent: #3b82f6;
+            --blue-light: #dbeafe;
+            
+            --gray-50: #f9fafb;
+            --gray-100: #f3f4f6;
+            --gray-200: #e5e7eb;
+            --gray-300: #d1d5db;
+            --gray-400: #9ca3af;
+            --gray-500: #6b7280;
+            --gray-600: #4b5563;
+            --gray-700: #374151;
+            --gray-800: #1f2937;
+            --gray-900: #111827;
+        }
+
+        /* Container Layout */
+        .app-container {
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Sidebar Navigation */
+        .sidebar {
+            width: 260px;
+            background: white;
+            border-right: 1px solid var(--gray-200);
+            padding: 24px 16px;
+            overflow-y: auto;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 32px;
+            padding: 0 12px;
+        }
+
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: var(--primary-gradient);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 700;
+            font-size: 18px;
+        }
+
+        .logo-text {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--gray-800);
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 12px;
+            margin-bottom: 4px;
+            border-radius: 8px;
+            color: var(--gray-600);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .nav-item:hover {
+            background: var(--gray-50);
+            color: var(--gray-800);
+        }
+
+        .nav-item.active {
+            background: var(--primary-subtle);
+            color: var(--primary-dark);
+            font-weight: 500;
+        }
+
+        /* Main Content Area */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Header */
+        .header {
+            background: white;
+            border-bottom: 1px solid var(--gray-200);
+            padding: 20px 32px;
+        }
+
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .page-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--gray-900);
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 12px;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: var(--primary-gradient);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
+        }
+
+        .btn-secondary {
+            background: white;
+            color: var(--gray-700);
+            border: 1px solid var(--gray-300);
+        }
+
+        .btn-secondary:hover {
+            background: var(--gray-50);
+        }
+
+        /* Tab Navigation */
+        .tabs {
+            display: flex;
+            gap: 32px;
+        }
+
+        .tab {
+            padding: 8px 0;
+            color: var(--gray-500);
+            font-size: 14px;
+            font-weight: 500;
+            border-bottom: 2px solid transparent;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .tab:hover {
+            color: var(--gray-700);
+        }
+
+        .tab.active {
+            color: var(--primary-dark);
+            border-bottom-color: var(--primary-dark);
+        }
+
+        .tab-badge {
+            display: inline-block;
+            margin-left: 8px;
+            padding: 2px 8px;
+            background: var(--orange-accent);
+            color: white;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        /* Content Area */
+        .content {
+            flex: 1;
+            padding: 24px 32px;
+            overflow-y: auto;
+        }
+
+        /* Stats Cards */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            margin-bottom: 24px;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid var(--gray-200);
+            transition: all 0.2s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        }
+
+        .stat-label {
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--gray-500);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+        }
+
+        .stat-value {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .stat-change {
+            font-size: 13px;
+            color: var(--gray-600);
+        }
+
+        .stat-card.orange .stat-value {
+            color: var(--orange-accent);
+        }
+
+        .stat-card.green .stat-value {
+            color: var(--primary-green);
+        }
+
+        .stat-card.blue .stat-value {
+            color: var(--blue-accent);
+        }
+
+        /* Review Interface */
+        .review-container {
+            display: grid;
+            grid-template-columns: 1fr 400px;
+            gap: 24px;
+            height: calc(100vh - 350px);
+        }
+
+        .transactions-panel {
+            background: white;
+            border-radius: 12px;
+            border: 1px solid var(--gray-200);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .panel-header {
+            padding: 20px;
+            border-bottom: 1px solid var(--gray-200);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .panel-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--gray-800);
+        }
+
+        .panel-controls {
+            display: flex;
+            gap: 12px;
+        }
+
+        .search-box {
+            padding: 6px 12px;
+            border: 1px solid var(--gray-300);
+            border-radius: 6px;
+            font-size: 14px;
+            width: 200px;
+        }
+
+        .search-box:focus {
+            outline: none;
+            border-color: var(--primary-green);
+            box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.1);
+        }
+
+        .select-all {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            color: var(--gray-600);
+        }
+
+        /* Transaction List */
+        .transactions-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 12px;
+        }
+
+        .transaction-item {
+            background: white;
+            border: 1px solid var(--gray-200);
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .transaction-item:hover {
+            border-color: var(--primary-green);
+            box-shadow: 0 2px 8px rgba(34, 197, 94, 0.1);
+        }
+
+        .transaction-item.selected {
+            background: var(--primary-subtle);
+            border-color: var(--primary-green);
+        }
+
+        .transaction-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 12px;
+        }
+
+        .transaction-merchant {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--gray-800);
+        }
+
+        .transaction-amount {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--gray-900);
+        }
+
+        .transaction-details {
+            display: flex;
+            gap: 16px;
+            font-size: 13px;
+            color: var(--gray-500);
+            margin-bottom: 12px;
+        }
+
+        .transaction-suggestion {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 12px;
+            background: var(--gray-50);
+            border-radius: 6px;
+        }
+
+        .suggestion-text {
+            font-size: 13px;
+            color: var(--gray-600);
+        }
+
+        .suggestion-category {
+            font-weight: 600;
+            color: var(--primary-dark);
+        }
+
+        .confidence-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .confidence-high {
+            background: var(--primary-subtle);
+            color: var(--primary-dark);
+        }
+
+        .confidence-medium {
+            background: var(--orange-light);
+            color: var(--orange-accent);
+        }
+
+        .confidence-low {
+            background: var(--gray-100);
+            color: var(--gray-600);
+        }
+
+        /* AI Panel */
+        .ai-panel {
+            background: white;
+            border-radius: 12px;
+            border: 1px solid var(--gray-200);
+            padding: 24px;
+        }
+
+        .ai-panel-header {
+            margin-bottom: 20px;
+        }
+
+        .ai-panel-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--gray-800);
+            margin-bottom: 8px;
+        }
+
+        .ai-panel-subtitle {
+            font-size: 14px;
+            color: var(--gray-500);
+        }
+
+        /* Linear Confidence Gauge - Slimmer */
+        .linear-gauge-container {
+            background: var(--gray-50);
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 20px;
+        }
+
+        .linear-gauge-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .linear-gauge-label {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--gray-600);
+        }
+
+        .linear-gauge-value {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--primary-dark);
+        }
+
+        .linear-gauge-track {
+            position: relative;
+            height: 24px;
+            background: linear-gradient(90deg, 
+                rgba(239, 68, 68, 0.1) 0%, 
+                rgba(245, 158, 11, 0.1) 33%, 
+                rgba(34, 197, 94, 0.1) 66%,
+                rgba(34, 197, 94, 0.2) 100%);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .linear-gauge-fill {
+            position: absolute;
+            left: 0;
+            top: 0;
+            height: 100%;
+            background: linear-gradient(90deg, #ef4444 0%, #f59e0b 50%, #22c55e 100%);
+            border-radius: 12px;
+            transition: width 0.5s ease;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding-right: 8px;
+        }
+
+        .linear-gauge-thumb {
+            width: 20px;
+            height: 20px;
+            background: white;
+            border-radius: 50%;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            font-weight: 700;
+            color: var(--gray-700);
+        }
+
+        .linear-gauge-markers {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 8px;
+            padding: 0 4px;
+        }
+
+        .gauge-marker {
+            font-size: 11px;
+            color: var(--gray-500);
+        }
+
+        /* Receipt Preview */
+        .receipt-preview {
+            background: linear-gradient(145deg, #ffffff 0%, var(--gray-50) 100%);
+            border: 1px solid var(--gray-200);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 24px;
+            min-height: 280px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .receipt-header {
+            text-align: center;
+            padding-bottom: 16px;
+            border-bottom: 2px dashed var(--gray-300);
+            margin-bottom: 16px;
+        }
+
+        .receipt-merchant {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--gray-800);
+            margin-bottom: 4px;
+        }
+
+        .receipt-date {
+            font-size: 12px;
+            color: var(--gray-500);
+        }
+
+        .receipt-items {
+            margin-bottom: 16px;
+        }
+
+        .receipt-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            font-size: 13px;
+            color: var(--gray-700);
+            border-bottom: 1px dotted var(--gray-200);
+        }
+
+        .receipt-item:last-child {
+            border-bottom: none;
+        }
+
+        .receipt-total {
+            display: flex;
+            justify-content: space-between;
+            padding-top: 16px;
+            margin-top: 16px;
+            border-top: 2px solid var(--gray-300);
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--gray-900);
+        }
+
+        .receipt-category {
+            display: inline-block;
+            margin-top: 12px;
+            padding: 6px 12px;
+            background: var(--primary-gradient);
+            color: white;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            text-align: center;
+        }
+
+        .receipt-confidence-badge {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            padding: 4px 8px;
+            background: white;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 600;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        /* AI Analysis Icon for low confidence */
+        .ai-analysis-icon {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+            min-height: 280px;
+        }
+
+        .ai-icon {
+            width: 80px;
+            height: 80px;
+            background: var(--gray-100);
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 36px;
+            margin-bottom: 16px;
+        }
+
+        .ai-status {
+            font-size: 14px;
+            color: var(--gray-600);
+            text-align: center;
+        }
+
+        .ai-status-title {
+            font-weight: 600;
+            color: var(--gray-800);
+            margin-bottom: 4px;
+        }
+
+        .confidence-breakdown {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .breakdown-item {
+            text-align: center;
+            padding: 12px;
+            background: var(--gray-50);
+            border-radius: 8px;
+        }
+
+        .breakdown-label {
+            font-size: 12px;
+            color: var(--gray-500);
+            margin-bottom: 4px;
+        }
+
+        .breakdown-value {
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        /* Action Buttons */
+        .action-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .btn-accept {
+            background: var(--primary-gradient);
+            color: white;
+        }
+
+        .btn-edit {
+            background: white;
+            color: var(--gray-700);
+            border: 1px solid var(--gray-300);
+        }
+
+        /* Rules Section */
+        .rules-list {
+            border-top: 1px solid var(--gray-200);
+            padding-top: 24px;
+        }
+
+        .rules-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .rules-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--gray-700);
+        }
+
+        .rule-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            background: var(--gray-50);
+            border-radius: 6px;
+            margin-bottom: 8px;
+        }
+
+        .rule-name {
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--gray-700);
+        }
+
+        .rule-confidence {
+            font-size: 12px;
+            color: var(--gray-500);
+        }
+
+        /* Progress Bar */
+        .progress-bar {
+            height: 6px;
+            background: var(--gray-200);
+            border-radius: 3px;
+            overflow: hidden;
+            margin-top: 8px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--primary-gradient);
+            border-radius: 3px;
+            transition: width 0.3s ease;
+        }
+
+        /* Checkbox */
+        input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            accent-color: var(--primary-green);
+        }
+
+        /* Loading State */
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+            color: var(--gray-500);
+        }
+
+        .spinner {
+            width: 32px;
+            height: 32px;
+            border: 3px solid var(--gray-200);
+            border-top-color: var(--primary-green);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1400px) {
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .review-container {
+                grid-template-columns: 1fr;
+            }
+            
+            .ai-panel {
+                display: none;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                display: none;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .tabs {
+                overflow-x: auto;
+            }
+        }
+
+        /* Toast Notification */
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            padding: 12px 20px;
+            background: var(--gray-900);
+            color: white;
+            border-radius: 8px;
+            font-size: 14px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        .toast.success {
+            background: var(--primary-gradient);
+        }
+
+        .toast.error {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="logo">
+                <div class="logo-icon">CP</div>
+                <div class="logo-text">Clear Piggy</div>
+            </div>
+            
+            <nav>
+                <div class="nav-item">
+                    <span>📊</span>
+                    <span>Dashboard</span>
+                </div>
+                <div class="nav-item">
+                    <span>💳</span>
+                    <span>Transactions</span>
+                </div>
+                <div class="nav-item">
+                    <span>🏦</span>
+                    <span>Accounts</span>
+                </div>
+                <div class="nav-item active">
+                    <span>🏷️</span>
+                    <span>Categories</span>
+                </div>
+                <div class="nav-item">
+                    <span>📈</span>
+                    <span>Analytics</span>
+                </div>
+                <div class="nav-item">
+                    <span>⚙️</span>
+                    <span>Settings</span>
+                </div>
+            </nav>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Header -->
+            <div class="header">
+                <div class="header-top">
+                    <h1 class="page-title">Categories & Auto-Classification</h1>
+                    <div class="header-actions">
+                        <button class="btn btn-secondary">
+                            <span>📥</span>
+                            Export Rules
+                        </button>
+                        <button class="btn btn-primary" onclick="runBatchProcess()">
+                            <span>🤖</span>
+                            Run AI Batch Process
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Tabs -->
+                <div class="tabs">
+                    <div class="tab active" onclick="switchTab(this, 'needs-review')">
+                        Needs Review
+                        <span class="tab-badge">12</span>
+                    </div>
+                    <div class="tab" onclick="switchTab(this, 'auto-categorized')">
+                        Auto-Categorized
+                    </div>
+                    <div class="tab" onclick="switchTab(this, 'rules')">
+                        Rules Management
+                    </div>
+                    <div class="tab" onclick="switchTab(this, 'settings')">
+                        Settings
+                    </div>
+                </div>
+            </div>
+
+            <!-- Content Area -->
+            <div class="content">
+                <!-- Stats Cards -->
+                <div class="stats-grid">
+                    <div class="stat-card orange">
+                        <div class="stat-label">Needs Review</div>
+                        <div class="stat-value">12</div>
+                        <div class="stat-change">↓ 8 from yesterday</div>
+                    </div>
+                    <div class="stat-card green">
+                        <div class="stat-label">High Confidence</div>
+                        <div class="stat-value">247</div>
+                        <div class="stat-change">↑ 23 from yesterday</div>
+                    </div>
+                    <div class="stat-card blue">
+                        <div class="stat-label">Active Rules</div>
+                        <div class="stat-value">34</div>
+                        <div class="stat-change">+2 new this week</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Success Rate</div>
+                        <div class="stat-value" style="color: var(--primary-dark);">94.2%</div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 94.2%;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Review Interface -->
+                <div class="review-container">
+                    <!-- Transactions Panel -->
+                    <div class="transactions-panel">
+                        <div class="panel-header">
+                            <div>
+                                <div class="panel-title">Transactions Needing Review</div>
+                                <div class="select-all">
+                                    <input type="checkbox" id="selectAll" onchange="toggleSelectAll()">
+                                    <label for="selectAll">Select all</label>
+                                </div>
+                            </div>
+                            <div class="panel-controls">
+                                <input type="text" class="search-box" placeholder="Search transactions...">
+                                <button class="btn btn-secondary btn-sm">Filters</button>
+                            </div>
+                        </div>
+                        
+                        <div class="transactions-list" id="transactionsList">
+                            <!-- Transactions will be loaded here -->
+                        </div>
+                    </div>
+
+                    <!-- AI Suggestions Panel -->
+                    <div class="ai-panel">
+                        <div class="ai-panel-header">
+                            <div class="ai-panel-title">AI Classification Analysis</div>
+                            <div class="ai-panel-subtitle">Based on pattern matching and historical data</div>
+                        </div>
+
+                        <!-- Linear Confidence Gauge -->
+                        <div class="linear-gauge-container">
+                            <div class="linear-gauge-header">
+                                <span class="linear-gauge-label">AI Confidence Score</span>
+                                <span class="linear-gauge-value" id="confidenceValue">85%</span>
+                            </div>
+                            <div class="linear-gauge-track">
+                                <div class="linear-gauge-fill" id="gaugeFill" style="width: 85%;">
+                                    <div class="linear-gauge-thumb">85</div>
+                                </div>
+                            </div>
+                            <div class="linear-gauge-markers">
+                                <span class="gauge-marker">0%</span>
+                                <span class="gauge-marker">Low</span>
+                                <span class="gauge-marker">Medium</span>
+                                <span class="gauge-marker">High</span>
+                                <span class="gauge-marker">100%</span>
+                            </div>
+                        </div>
+
+                        <!-- Receipt Preview / AI Analysis -->
+                        <div id="previewContainer">
+                            <!-- Dynamic content will be inserted here -->
+                        </div>
+
+                        <!-- Confidence Breakdown -->
+                        <div class="confidence-breakdown">
+                            <div class="breakdown-item">
+                                <div class="breakdown-label">High</div>
+                                <div class="breakdown-value" style="color: var(--primary-green);">247</div>
+                            </div>
+                            <div class="breakdown-item">
+                                <div class="breakdown-label">Medium</div>
+                                <div class="breakdown-value" style="color: var(--orange-accent);">45</div>
+                            </div>
+                            <div class="breakdown-item">
+                                <div class="breakdown-label">Low</div>
+                                <div class="breakdown-value" style="color: var(--gray-500);">12</div>
+                            </div>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="action-buttons">
+                            <button class="btn btn-accept" onclick="acceptSuggestion()">
+                                ✓ Accept
+                            </button>
+                            <button class="btn btn-edit" onclick="editCategory()">
+                                ✏️ Edit Category
+                            </button>
+                        </div>
+                        <div class="action-buttons">
+                            <button class="btn btn-secondary" onclick="createRule()">
+                                📋 Create Rule
+                            </button>
+                            <button class="btn btn-secondary" onclick="skipTransaction()">
+                                → Skip
+                            </button>
+                        </div>
+
+                        <!-- Related Rules -->
+                        <div class="rules-list">
+                            <div class="rules-header">
+                                <div class="rules-title">Related Rules</div>
+                                <a href="#" style="font-size: 12px; color: var(--primary-dark);">View all</a>
+                            </div>
+                            <div id="relatedRules">
+                                <!-- Rules will be loaded here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div class="toast" id="toast"></div>
+
+    <script>
+        // Mock Data
+        const mockTransactions = [
+            {
+                id: 'tx1',
+                merchant_name: 'Amazon.com',
+                amount: -89.99,
+                date: '2025-09-03',
+                current_category: null,
+                ai_suggestion: 'Shopping',
+                confidence: 0.85,
+                description: 'AMAZON.COM*M84H23 AMZN.COM/BILL',
+                selected: false
+            },
+            {
+                id: 'tx2',
+                merchant_name: 'Whole Foods Market',
+                amount: -156.43,
+                date: '2025-09-02',
+                current_category: null,
+                ai_suggestion: 'Groceries',
+                confidence: 0.92,
+                description: 'WHOLEFDS MKT #10234',
+                selected: false
+            },
+            {
+                id: 'tx3',
+                merchant_name: 'Shell Gas Station',
+                amount: -65.00,
+                date: '2025-09-01',
+                current_category: null,
+                ai_suggestion: 'Transportation',
+                confidence: 0.88,
+                description: 'SHELL OIL 574983621',
+                selected: false
+            },
+            {
+                id: 'tx4',
+                merchant_name: 'Netflix',
+                amount: -15.99,
+                date: '2025-09-01',
+                current_category: null,
+                ai_suggestion: 'Entertainment',
+                confidence: 0.95,
+                description: 'NETFLIX.COM',
+                selected: false
+            },
+            {
+                id: 'tx5',
+                merchant_name: 'Chipotle Mexican Grill',
+                amount: -28.75,
+                date: '2025-08-31',
+                current_category: null,
+                ai_suggestion: 'Food & Dining',
+                confidence: 0.78,
+                description: 'CHIPOTLE 0234',
+                selected: false
+            },
+            {
+                id: 'tx6',
+                merchant_name: 'Target',
+                amount: -234.56,
+                date: '2025-08-30',
+                current_category: null,
+                ai_suggestion: 'Shopping',
+                confidence: 0.82,
+                description: 'TARGET 00012345',
+                selected: false
+            }
+        ];
+
+        const mockRules = [
+            {
+                id: 'rule1',
+                name: 'Starbucks → Food & Dining',
+                pattern: 'STARBUCKS*',
+                category: 'Food & Dining',
+                confidence: 0.95,
+                auto_created: false
+            },
+            {
+                id: 'rule2',
+                name: 'Amazon Prime → Entertainment',
+                pattern: 'AMZN PRIME*',
+                category: 'Entertainment',
+                confidence: 0.90,
+                auto_created: true
+            },
+            {
+                id: 'rule3',
+                name: 'Gas Stations → Transportation',
+                pattern: 'SHELL|CHEVRON|EXXON',
+                category: 'Transportation',
+                confidence: 0.93,
+                auto_created: false
+            }
+        ];
+
+        let selectedTransactionId = 'tx1';
+
+        // Initialize the page
+        function init() {
+            loadTransactions();
+            loadRelatedRules();
+            selectTransaction('tx1');
+        }
+
+        // Load transactions into the list
+        function loadTransactions() {
+            const listEl = document.getElementById('transactionsList');
+            listEl.innerHTML = mockTransactions.map(t => `
+                <div class="transaction-item ${t.selected ? 'selected' : ''}" 
+                     onclick="selectTransaction('${t.id}')"
+                     id="transaction-${t.id}">
+                    <div class="transaction-header">
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <input type="checkbox" 
+                                   onclick="event.stopPropagation(); toggleTransaction('${t.id}')"
+                                   ${t.selected ? 'checked' : ''}>
+                            <div class="transaction-merchant">${t.merchant_name}</div>
+                        </div>
+                        <div class="transaction-amount">$${Math.abs(t.amount).toFixed(2)}</div>
+                    </div>
+                    <div class="transaction-details">
+                        <span>${new Date(t.date).toLocaleDateString()}</span>
+                        <span>•</span>
+                        <span>${t.description}</span>
+                    </div>
+                    <div class="transaction-suggestion">
+                        <div class="suggestion-text">
+                            AI suggests: <span class="suggestion-category">${t.ai_suggestion}</span>
+                        </div>
+                        <div class="confidence-badge ${getConfidenceClass(t.confidence)}">
+                            ${(t.confidence * 100).toFixed(0)}%
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Load related rules
+        function loadRelatedRules() {
+            const rulesEl = document.getElementById('relatedRules');
+            rulesEl.innerHTML = mockRules.map(r => `
+                <div class="rule-item">
+                    <div>
+                        <div class="rule-name">${r.name}</div>
+                        <div class="rule-confidence">Confidence: ${(r.confidence * 100).toFixed(0)}%</div>
+                    </div>
+                    <div style="display: flex; gap: 8px;">
+                        <button class="btn btn-sm" style="font-size: 12px; padding: 4px 8px;">Edit</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Get confidence class for styling
+        function getConfidenceClass(confidence) {
+            if (confidence >= 0.8) return 'confidence-high';
+            if (confidence >= 0.6) return 'confidence-medium';
+            return 'confidence-low';
+        }
+
+        // Select a transaction
+        function selectTransaction(id) {
+            // Remove previous selection
+            document.querySelectorAll('.transaction-item').forEach(el => {
+                el.classList.remove('selected');
+            });
+            
+            // Add selection to clicked item
+            document.getElementById(`transaction-${id}`).classList.add('selected');
+            selectedTransactionId = id;
+            
+            // Update gauge
+            const transaction = mockTransactions.find(t => t.id === id);
+            updateGauge(transaction.confidence);
+        }
+
+        // Update confidence gauge
+        function updateGauge(confidence) {
+            const percentage = confidence * 100;
+            const percentInt = Math.round(percentage);
+            
+            // Update linear gauge
+            const gaugeFill = document.getElementById('gaugeFill');
+            const confidenceValue = document.getElementById('confidenceValue');
+            const thumb = gaugeFill.querySelector('.linear-gauge-thumb');
+            
+            gaugeFill.style.width = `${percentage}%`;
+            confidenceValue.textContent = `${percentInt}%`;
+            thumb.textContent = percentInt;
+            
+            // Get current transaction
+            const transaction = mockTransactions.find(t => t.id === selectedTransactionId);
+            
+            // Update preview container based on confidence
+            const previewContainer = document.getElementById('previewContainer');
+            
+            if (confidence >= 0.75) {
+                // Show receipt preview for high confidence
+                previewContainer.innerHTML = `
+                    <div class="receipt-preview" style="position: relative;">
+                        <div class="receipt-confidence-badge confidence-${getConfidenceClass(confidence)}">
+                            ${percentInt}% Match
+                        </div>
+                        <div class="receipt-header">
+                            <div class="receipt-merchant">${transaction.merchant_name}</div>
+                            <div class="receipt-date">${new Date(transaction.date).toLocaleDateString('en-US', { 
+                                weekday: 'short', 
+                                year: 'numeric', 
+                                month: 'short', 
+                                day: 'numeric' 
+                            })}</div>
+                        </div>
+                        <div class="receipt-items">
+                            ${generateReceiptItems(transaction)}
+                        </div>
+                        <div class="receipt-total">
+                            <span>Total</span>
+                            <span>$${Math.abs(transaction.amount).toFixed(2)}</span>
+                        </div>
+                        <center>
+                            <div class="receipt-category">
+                                📁 ${transaction.ai_suggestion}
+                            </div>
+                        </center>
+                    </div>
+                `;
+            } else {
+                // Show AI analysis icon for lower confidence
+                previewContainer.innerHTML = `
+                    <div class="receipt-preview ai-analysis-icon">
+                        <div class="ai-icon">${confidence >= 0.6 ? '🤔' : '⚠️'}</div>
+                        <div class="ai-status">
+                            <div class="ai-status-title">
+                                ${confidence >= 0.6 ? 'Moderate Confidence' : 'Manual Review Needed'}
+                            </div>
+                            <div>${confidence >= 0.6 ? 
+                                'Pattern partially matches known categories' : 
+                                'Unable to determine category with certainty'}</div>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+        
+        // Generate receipt items based on transaction
+        function generateReceiptItems(transaction) {
+            const items = {
+                'Amazon.com': [
+                    { name: 'Electronics Purchase', amount: 45.99 },
+                    { name: 'Shipping & Handling', amount: 8.99 },
+                    { name: 'Tax', amount: 35.01 }
+                ],
+                'Whole Foods Market': [
+                    { name: 'Organic Groceries', amount: 125.00 },
+                    { name: 'Prepared Foods', amount: 22.50 },
+                    { name: 'Tax', amount: 8.93 }
+                ],
+                'Shell Gas Station': [
+                    { name: 'Premium Gasoline', amount: 60.00 },
+                    { name: 'Service Fee', amount: 0.35 },
+                    { name: 'Tax', amount: 4.65 }
+                ],
+                'Netflix': [
+                    { name: 'Premium Plan', amount: 15.99 }
+                ],
+                'Chipotle Mexican Grill': [
+                    { name: 'Burrito Bowl', amount: 12.50 },
+                    { name: 'Guacamole', amount: 2.95 },
+                    { name: 'Drink', amount: 3.25 },
+                    { name: 'Tax', amount: 10.05 }
+                ],
+                'Target': [
+                    { name: 'Household Items', amount: 156.78 },
+                    { name: 'Clothing', amount: 65.00 },
+                    { name: 'Tax', amount: 12.78 }
+                ]
+            };
+            
+            const merchantItems = items[transaction.merchant_name] || [
+                { name: 'Purchase', amount: Math.abs(transaction.amount) }
+            ];
+            
+            return merchantItems.map(item => `
+                <div class="receipt-item">
+                    <span>${item.name}</span>
+                    <span>$${item.amount.toFixed(2)}</span>
+                </div>
+            `).join('');
+        }
+
+        // Toggle transaction selection
+        function toggleTransaction(id) {
+            const transaction = mockTransactions.find(t => t.id === id);
+            transaction.selected = !transaction.selected;
+            loadTransactions();
+        }
+
+        // Toggle all selections
+        function toggleSelectAll() {
+            const selectAll = document.getElementById('selectAll').checked;
+            mockTransactions.forEach(t => t.selected = selectAll);
+            loadTransactions();
+        }
+
+        // Switch tabs
+        function switchTab(tabEl, tabName) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            tabEl.classList.add('active');
+            
+            // Here you would load different content based on the tab
+            showToast(`Switched to ${tabName} tab`, 'success');
+        }
+
+        // Action functions
+        function acceptSuggestion() {
+            const transaction = mockTransactions.find(t => t.id === selectedTransactionId);
+            showToast(`Accepted category "${transaction.ai_suggestion}" for ${transaction.merchant_name}`, 'success');
+            
+            // Remove the transaction from the list
+            const index = mockTransactions.findIndex(t => t.id === selectedTransactionId);
+            mockTransactions.splice(index, 1);
+            loadTransactions();
+            
+            // Select next transaction if available
+            if (mockTransactions.length > 0) {
+                selectTransaction(mockTransactions[0].id);
+            }
+        }
+
+        function editCategory() {
+            showToast('Opening category editor...', 'success');
+        }
+
+        function createRule() {
+            const transaction = mockTransactions.find(t => t.id === selectedTransactionId);
+            showToast(`Creating rule for ${transaction.merchant_name}...`, 'success');
+        }
+
+        function skipTransaction() {
+            showToast('Transaction skipped', 'success');
+            
+            // Find next transaction
+            const currentIndex = mockTransactions.findIndex(t => t.id === selectedTransactionId);
+            if (currentIndex < mockTransactions.length - 1) {
+                selectTransaction(mockTransactions[currentIndex + 1].id);
+            }
+        }
+
+        function runBatchProcess() {
+            showToast('Running AI batch process on all transactions...', 'success');
+            
+            // Simulate processing
+            setTimeout(() => {
+                showToast('Batch process completed! 247 transactions categorized.', 'success');
+            }, 2000);
+        }
+
+        // Show toast notification
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = `toast ${type}`;
+            toast.classList.add('show');
+            
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+        // Initialize on load
+        window.onload = init;
+    </script>
+</body>
+</html>

@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Clear Piggy Neo</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        h1 { color: #333; }
+        h2 { color: #666; font-size: 18px; }
+        .status { 
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .warning { background: #fff3cd; color: #856404; }
+        .info { background: #d1ecf1; color: #0c5460; }
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        button:hover { background: #45a049; }
+        pre {
+            background: #f4f4f4;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+        iframe {
+            width: 100%;
+            height: 600px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .log-entry {
+            padding: 5px;
+            margin: 2px 0;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .log-error { color: red; }
+        .log-warn { color: orange; }
+        .log-info { color: blue; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Clear Piggy Neo - Debug Panel</h1>
+        
+        <div class="status info" id="status">
+            Checking app status...
+        </div>
+
+        <h2>App Status</h2>
+        <div id="appStatus"></div>
+
+        <h2>Console Logs</h2>
+        <div id="consoleLogs" style="max-height: 300px; overflow-y: auto; background: #f9f9f9; padding: 10px; border-radius: 4px;"></div>
+
+        <h2>Actions</h2>
+        <button onclick="checkApp()">Check App Status</button>
+        <button onclick="clearLocalStorage()">Clear Local Storage</button>
+        <button onclick="reloadApp()">Reload App</button>
+        <button onclick="openApp()">Open App in New Tab</button>
+    </div>
+
+    <div class="container">
+        <h2>App Frame</h2>
+        <iframe id="appFrame" src="http://localhost:3003"></iframe>
+    </div>
+
+    <script>
+        const logs = [];
+        const logDiv = document.getElementById('consoleLogs');
+        
+        function addLog(type, message) {
+            const entry = document.createElement('div');
+            entry.className = `log-entry log-${type}`;
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${type.toUpperCase()}: ${message}`;
+            logDiv.appendChild(entry);
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        async function checkApp() {
+            const statusDiv = document.getElementById('appStatus');
+            const mainStatus = document.getElementById('status');
+            
+            try {
+                // Try to fetch the app
+                const response = await fetch('http://localhost:3003', {
+                    mode: 'no-cors'
+                });
+                
+                // Check if we can access the iframe
+                const iframe = document.getElementById('appFrame');
+                
+                mainStatus.className = 'status success';
+                mainStatus.textContent = 'App is running on http://localhost:3003';
+                
+                statusDiv.innerHTML = `
+                    <p>✅ Server is responding</p>
+                    <p>Check the iframe below to see if the app is rendering</p>
+                    <p>If the app is blank, check the console logs in the iframe</p>
+                `;
+                
+                addLog('info', 'App server is running');
+            } catch (error) {
+                mainStatus.className = 'status error';
+                mainStatus.textContent = 'App is not accessible';
+                
+                statusDiv.innerHTML = `
+                    <p>❌ Cannot reach app at http://localhost:3003</p>
+                    <p>Error: ${error.message}</p>
+                `;
+                
+                addLog('error', error.message);
+            }
+        }
+
+        function clearLocalStorage() {
+            // Clear localStorage for the app domain
+            const iframe = document.getElementById('appFrame');
+            try {
+                iframe.contentWindow.localStorage.clear();
+                iframe.contentWindow.sessionStorage.clear();
+                addLog('info', 'Cleared localStorage and sessionStorage');
+                alert('Storage cleared! Reloading app...');
+                reloadApp();
+            } catch (e) {
+                // If we can't access iframe due to CORS, open in new tab
+                addLog('warn', 'Cannot clear storage from here due to CORS. Opening developer tools instructions...');
+                alert('To clear storage:\n1. Open http://localhost:3003 in a new tab\n2. Open Developer Tools (F12)\n3. Go to Application tab\n4. Clear Local Storage and Session Storage\n5. Reload the page');
+                openApp();
+            }
+        }
+
+        function reloadApp() {
+            const iframe = document.getElementById('appFrame');
+            iframe.src = iframe.src;
+            addLog('info', 'Reloaded app iframe');
+        }
+
+        function openApp() {
+            window.open('http://localhost:3003', '_blank');
+            addLog('info', 'Opened app in new tab');
+        }
+
+        // Listen for messages from iframe
+        window.addEventListener('message', (event) => {
+            if (event.origin === 'http://localhost:3003') {
+                addLog('info', `Message from app: ${JSON.stringify(event.data)}`);
+            }
+        });
+
+        // Check on load
+        window.onload = () => {
+            checkApp();
+            
+            // Try to inject console interceptor into iframe
+            const iframe = document.getElementById('appFrame');
+            iframe.onload = () => {
+                try {
+                    // Try to access iframe console
+                    const iframeWindow = iframe.contentWindow;
+                    if (iframeWindow) {
+                        addLog('info', 'Iframe loaded, checking document...');
+                        
+                        // Check if there's content
+                        setTimeout(() => {
+                            try {
+                                const hasContent = iframeWindow.document.body.innerHTML.length > 100;
+                                if (!hasContent) {
+                                    addLog('warn', 'App appears to be blank or showing minimal content');
+                                } else {
+                                    addLog('info', 'App has rendered content');
+                                }
+                            } catch (e) {
+                                addLog('warn', 'Cannot access iframe content due to CORS');
+                            }
+                        }, 2000);
+                    }
+                } catch (e) {
+                    addLog('error', 'Cannot access iframe: ' + e.message);
+                }
+            };
+        };
+    </script>
+</body>
+</html>

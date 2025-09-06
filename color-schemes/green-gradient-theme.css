@@ -1,0 +1,366 @@
+/* Modern Green Gradient Color Scheme for Clear Piggy Dashboard */
+
+:root {
+  /* Primary Green Gradient Palette */
+  --gradient-emerald: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  --gradient-mint: linear-gradient(135deg, #34d399 0%, #10b981 100%);
+  --gradient-forest: linear-gradient(135deg, #059669 0%, #047857 100%);
+  --gradient-lime: linear-gradient(135deg, #84cc16 0%, #65a30d 100%);
+  --gradient-teal: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%);
+  
+  /* Subtle Background Gradients */
+  --gradient-soft-mint: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+  --gradient-soft-emerald: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+  
+  /* Primary Colors */
+  --primary-50: #f0fdf4;
+  --primary-100: #dcfce7;
+  --primary-200: #bbf7d0;
+  --primary-300: #86efac;
+  --primary-400: #4ade80;
+  --primary-500: #22c55e;
+  --primary-600: #16a34a;
+  --primary-700: #15803d;
+  --primary-800: #166534;
+  --primary-900: #14532d;
+  
+  /* Accent Colors - Complementary */
+  --accent-gold: #fbbf24;
+  --accent-amber: #f59e0b;
+  --accent-orange: #fb923c;
+  
+  /* Neutral Grays with Green Tint */
+  --gray-50: #f8faf9;
+  --gray-100: #f1f5f3;
+  --gray-200: #e2e9e6;
+  --gray-300: #c7d2cc;
+  --gray-400: #94a39c;
+  --gray-500: #64736c;
+  --gray-600: #475750;
+  --gray-700: #374440;
+  --gray-800: #1e2925;
+  --gray-900: #0f1512;
+}
+
+/* Light Mode Color Scheme */
+.dashboard-light {
+  /* Backgrounds */
+  --bg-primary: linear-gradient(135deg, #ffffff 0%, #f0fdf4 100%);
+  --bg-secondary: #f8faf9;
+  --bg-card: #ffffff;
+  --bg-hover: rgba(34, 197, 94, 0.05);
+  
+  /* Card Styles with Gradient Borders */
+  --card-shadow: 0 1px 3px rgba(22, 163, 74, 0.1), 0 1px 2px rgba(22, 163, 74, 0.06);
+  --card-shadow-hover: 0 10px 25px rgba(22, 163, 74, 0.15), 0 6px 10px rgba(22, 163, 74, 0.1);
+  
+  /* Text Colors */
+  --text-primary: #0f1512;
+  --text-secondary: #475750;
+  --text-muted: #94a39c;
+  
+  /* Interactive Elements */
+  --button-primary: var(--gradient-emerald);
+  --button-secondary: var(--gradient-mint);
+  --button-hover: var(--gradient-forest);
+  
+  /* Status Colors */
+  --success: #10b981;
+  --warning: #f59e0b;
+  --error: #ef4444;
+  --info: #3b82f6;
+}
+
+/* Dark Mode Color Scheme */
+.dashboard-dark {
+  /* Backgrounds with Dark Green Tones */
+  --bg-primary: linear-gradient(135deg, #0f1512 0%, #1e2925 100%);
+  --bg-secondary: #1e2925;
+  --bg-card: linear-gradient(135deg, #1e2925 0%, #374440 30%);
+  --bg-hover: rgba(34, 197, 94, 0.1);
+  
+  /* Card Styles */
+  --card-shadow: 0 1px 3px rgba(16, 185, 129, 0.2), 0 1px 2px rgba(16, 185, 129, 0.12);
+  --card-shadow-hover: 0 10px 25px rgba(16, 185, 129, 0.3), 0 6px 10px rgba(16, 185, 129, 0.2);
+  
+  /* Text Colors */
+  --text-primary: #f0fdf4;
+  --text-secondary: #bbf7d0;
+  --text-muted: #86efac;
+  
+  /* Interactive Elements */
+  --button-primary: var(--gradient-mint);
+  --button-secondary: var(--gradient-teal);
+  --button-hover: var(--gradient-lime);
+  
+  /* Status Colors */
+  --success: #4ade80;
+  --warning: #fbbf24;
+  --error: #f87171;
+  --info: #60a5fa;
+}
+
+/* Component Styles */
+
+/* Sidebar Navigation */
+.sidebar-green {
+  background: var(--gradient-forest);
+  backdrop-filter: blur(10px);
+}
+
+.sidebar-item {
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.sidebar-item:hover {
+  background: linear-gradient(90deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%);
+  transform: translateX(4px);
+}
+
+.sidebar-item.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: var(--gradient-lime);
+  border-radius: 0 4px 4px 0;
+}
+
+/* Cards with Green Gradient Accents */
+.card-gradient {
+  background: var(--bg-card);
+  border: 1px solid transparent;
+  background-clip: padding-box;
+  position: relative;
+  border-radius: 16px;
+  transition: all 0.3s ease;
+}
+
+.card-gradient::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: 16px;
+  padding: 1px;
+  background: var(--gradient-emerald);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: destination-out;
+  mask-composite: exclude;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.card-gradient:hover::before {
+  opacity: 1;
+}
+
+/* Metric Cards */
+.metric-card {
+  background: var(--bg-card);
+  border-radius: 16px;
+  padding: 24px;
+  position: relative;
+  overflow: hidden;
+}
+
+.metric-card::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -50%;
+  width: 200%;
+  height: 200%;
+  background: var(--gradient-mint);
+  opacity: 0.05;
+  border-radius: 50%;
+  animation: pulse-subtle 4s ease-in-out infinite;
+}
+
+@keyframes pulse-subtle {
+  0%, 100% { transform: scale(0.9); opacity: 0.05; }
+  50% { transform: scale(1.1); opacity: 0.1; }
+}
+
+/* Buttons with Gradient */
+.btn-primary {
+  background: var(--gradient-emerald);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  padding: 12px 24px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-primary::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+  transition: left 0.5s ease;
+}
+
+.btn-primary:hover::before {
+  left: 100%;
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(16, 185, 129, 0.3);
+}
+
+/* Charts with Green Theme */
+.chart-container {
+  background: var(--bg-card);
+  border-radius: 16px;
+  padding: 24px;
+  position: relative;
+}
+
+.chart-container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: var(--gradient-mint);
+  border-radius: 16px 16px 0 0;
+}
+
+/* Transaction List Items */
+.transaction-item {
+  padding: 16px;
+  border-radius: 12px;
+  transition: all 0.2s ease;
+  background: var(--bg-card);
+  border: 1px solid transparent;
+}
+
+.transaction-item:hover {
+  background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-hover) 100%);
+  border-color: var(--primary-200);
+  transform: translateX(4px);
+}
+
+.transaction-income {
+  border-left: 3px solid var(--primary-500);
+}
+
+.transaction-expense {
+  border-left: 3px solid var(--error);
+}
+
+/* Status Indicators */
+.status-badge {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.status-badge.success {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(34, 197, 94, 0.1) 100%);
+  color: var(--success);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.status-badge.pending {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(251, 191, 36, 0.1) 100%);
+  color: var(--warning);
+  border: 1px solid rgba(245, 158, 11, 0.2);
+}
+
+/* Floating Action Button */
+.fab {
+  position: fixed;
+  bottom: 32px;
+  right: 32px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--gradient-emerald);
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.fab:hover {
+  transform: scale(1.1) rotate(90deg);
+  box-shadow: 0 8px 30px rgba(16, 185, 129, 0.5);
+}
+
+/* Toggle Switch with Gradient */
+.toggle-switch {
+  width: 48px;
+  height: 24px;
+  background: var(--gray-300);
+  border-radius: 24px;
+  position: relative;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.toggle-switch.active {
+  background: var(--gradient-emerald);
+}
+
+.toggle-switch-handle {
+  width: 20px;
+  height: 20px;
+  background: white;
+  border-radius: 50%;
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.toggle-switch.active .toggle-switch-handle {
+  transform: translateX(24px);
+}
+
+/* Loading Skeleton with Gradient Animation */
+.skeleton {
+  background: linear-gradient(90deg, var(--gray-200) 25%, var(--gray-100) 50%, var(--gray-200) 75%);
+  background-size: 200% 100%;
+  animation: skeleton-loading 1.5s ease-in-out infinite;
+}
+
+@keyframes skeleton-loading {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Glassmorphism Elements */
+.glass-card {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  padding: 24px;
+}
+
+.glass-card-green {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(34, 197, 94, 0.05) 100%);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+}
